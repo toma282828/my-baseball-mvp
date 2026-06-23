@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getAppData } from '@/lib/db';
-import { aggregateBatting, aggregatePitching, fmtAvg, fmtEra, outsToIp, fmtJersey } from '@/lib/stats';
+import { aggregateBatting, aggregatePitching, fmtAvg, fmtEra, outsToIp, fmtJersey, buildAllAwards } from '@/lib/stats';
+import { getTodayYear } from '@/lib/date';
 import { formatDate } from '@/lib/date';
 
 export default async function PlayerPage({ params }) {
@@ -11,6 +12,10 @@ export default async function PlayerPage({ params }) {
   const { players, games, stats } = await getAppData();
   const player = players.find((p) => p.name === name);
   if (!player) notFound();
+
+  const currentYear = getTodayYear();
+  const allAwards = buildAllAwards(players, stats, games, currentYear);
+  const myAwards = allAwards[name] || [];
 
   const playerStats = stats.filter((s) => s.player_name === name);
   const bat = aggregateBatting(playerStats);
@@ -35,6 +40,15 @@ export default async function PlayerPage({ params }) {
         </div>
         <div style={{fontSize:'1.1rem',fontWeight:600}}>{player.name}</div>
         <div style={{fontSize:'.8rem',color:'#888',marginTop:4}}>{player.position}</div>
+        {myAwards.length > 0 && (
+          <div className="player-titles">
+            {myAwards.map((a, i) => (
+              <span key={i} className={`king-badge${a.golden ? ' golden' : ''}`}>
+                {a.label}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 打撃成績 */}

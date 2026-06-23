@@ -228,6 +228,34 @@ input, select, textarea {
 .badge-lose { background: #ffebee; color: #c62828; }
 .badge-draw { background: #e3f2fd; color: #1565c0; }
 
+/* ── King badges (awards) ── */
+.player-titles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin: 12px 0 4px;
+}
+.king-badge {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: .75rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #f1f8e9, #e8f5e9);
+  color: var(--green-900);
+  border: 1px solid #a5d6a7;
+  box-shadow: 0 2px 8px rgba(46, 125, 50, 0.15);
+}
+.king-badge.golden {
+  background: linear-gradient(135deg, #fffde7 0%, #ffd700 42%, #ffb300 100%);
+  color: #4e342e;
+  border: 1.5px solid #ff8f00;
+  box-shadow: 0 3px 14px rgba(255, 179, 0, 0.45);
+  font-size: .78rem;
+  letter-spacing: 0.02em;
+}
+
 /* ── Game cards ── */
 .game-card {
   display: block;
