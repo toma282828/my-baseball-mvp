@@ -15,7 +15,8 @@ export default function RankingPage({ players, games, stats, initialYear }) {
 
   const rankings = buildRankings(players, stats, games, year);
   const record = buildTeamRecord(games, year);
-  const { BAT_CATS, PIT_CATS } = rankings;
+  const { BAT_CATS, PIT_CATS, qualifiedPA, gameCount } = rankings;
+  const currentCatObj = (tab === 'bat' ? BAT_CATS : PIT_CATS).find(c => c.key === (tab === 'bat' ? batCat : pitCat));
 
   const currentCats = tab === 'bat' ? BAT_CATS : PIT_CATS;
   const currentCat = tab === 'bat' ? batCat : pitCat;
@@ -77,10 +78,21 @@ export default function RankingPage({ players, games, stats, initialYear }) {
         ))}
       </div>
 
-      {/* ランキング表 */}
+      {/* 規定打席・ランキング表 */}
+      {tab === 'bat' && gameCount > 0 && (
+        <p className="hint" style={{marginBottom:6}}>
+          {currentCatObj?.needsQualified
+            ? `※ 規定打席（${qualifiedPA}打席＝${gameCount}試合×2）に達した選手のみ表示`
+            : '※ 全選手対象（規定打席不問）'}
+        </p>
+      )}
       <div className="card" style={{padding:0,overflow:'hidden'}}>
         {displayRows.length === 0 ? (
-          <p className="hint" style={{textAlign:'center',padding:'24px 0'}}>データがありません</p>
+          <p className="hint" style={{textAlign:'center',padding:'24px 0'}}>
+            {tab === 'bat' && currentCatObj?.needsQualified && gameCount > 0
+              ? `規定打席（${qualifiedPA}打席）に達した選手がいません`
+              : 'データがありません'}
+          </p>
         ) : (
           <table className="rank-table">
             <thead>
