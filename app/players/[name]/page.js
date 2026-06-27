@@ -125,7 +125,7 @@ export default async function PlayerPage({ params }) {
         <>
           <h3>試合ごとの成績</h3>
           {gameHistory.map((s) => {
-            const hasBatRow = s.ab > 0;
+            const hasBatRow = (s.ab ?? 0) > 0 || (s.bb ?? 0) > 0 || (s.bunt ?? 0) > 0 || (s.sf ?? 0) > 0;
             const hasPitRow = s.ip_outs > 0 || s.decision;
             return (
               <Link key={s.id} href={`/games/${s.game_id}`} className="game-card">
@@ -135,9 +135,12 @@ export default async function PlayerPage({ params }) {
                 </div>
                 {hasBatRow && (
                   <div className="game-card-score" style={{fontSize:'.88rem'}}>
-                    打: {s.ab}打数{s.s1+s.s2+s.s3+s.hr}安打
-                    {s.hr>0?` ${s.hr}HR`:''} {s.rbi}打点
-                    {s.sb>0?` ${s.sb}盗塁`:''}
+                    打: {s.ab}打数{(s.s1??0)+(s.s2??0)+(s.s3??0)+(s.hr??0)}安打
+                    {(s.hr??0)>0?` ${s.hr}HR`:''} {s.rbi??0}打点
+                    {(s.bb??0)>0?` ${s.bb}四死球`:''}
+                    {(s.bunt??0)>0?` ${s.bunt}犠打`:''}
+                    {(s.sf??0)>0?` ${s.sf}犠飛`:''}
+                    {(s.sb??0)>0?` ${s.sb}盗塁`:''}
                   </div>
                 )}
                 {hasPitRow && (
