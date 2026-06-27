@@ -70,13 +70,21 @@ function reconstructAtBats(s) {
     if (firstHit) firstHit.rbi = rbi;
     else if (atBats.length > 0) atBats[0].rbi = rbi;
   }
-  // 得点圏: risp_hit 分を安打に設定
+  // 得点圏: まず risp_hit 分の安打に risp=true、次に残りを非安打ABに割り当て
+  const ra = s.risp_ab ?? 0;
   const rh = s.risp_hit ?? 0;
-  if (rh > 0) {
-    let remaining = rh;
+  if (ra > 0) {
+    let hitRemain = rh;
     for (const ab of atBats) {
-      if (HIT_KEYS.includes(ab.result) && remaining > 0) {
-        ab.risp = true; remaining--;
+      if (HIT_KEYS.includes(ab.result) && hitRemain > 0) {
+        ab.risp = true; hitRemain--;
+      }
+    }
+    // 得点圏での凡退・三振も復元（risp_ab - risp_hit 分）
+    let outRemain = ra - rh;
+    for (const ab of atBats) {
+      if (!ab.risp && !NON_AB_KEYS.includes(ab.result) && outRemain > 0) {
+        ab.risp = true; outRemain--;
       }
     }
   }
