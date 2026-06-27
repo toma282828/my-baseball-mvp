@@ -47,6 +47,10 @@ export default function RankingPage({ players, stats, games, initialYear }) {
               <div className="lbl">{lbl}</div>
             </div>
           ))}
+          <div>
+            <div className="val" style={{fontSize:'1.05rem'}}>{record.winPct}</div>
+            <div className="lbl">勝率</div>
+          </div>
         </div>
       </div>
 

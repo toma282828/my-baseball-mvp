@@ -2,6 +2,8 @@ import AppShell from '@/components/AppShell';
 import { getAppData } from '@/lib/db';
 import './globals.css';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'チーム成績',
   description: '草野球チームの成績管理',

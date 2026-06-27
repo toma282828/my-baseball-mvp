@@ -100,12 +100,13 @@ function makeEntry(playerName) {
 }
 
 function entryFromStat(s) {
+  const hasBatData = s.ab > 0 || (s.bb ?? 0) > 0 || (s.bunt ?? 0) > 0 || (s.sf ?? 0) > 0;
   return {
     player_name:   s.player_name,
     game_position: s.game_position ?? '',
-    showBat: s.ab > 0,
+    showBat: hasBatData,
     showPit: s.ip_outs > 0 || !!s.decision,
-    atBats:  s.ab > 0 ? reconstructAtBats(s) : [],
+    atBats:  hasBatData ? reconstructAtBats(s) : [],
     run_scored: s.run_scored ?? '',
     sb: s.sb ?? '',
     cs: s.cs ?? '',
