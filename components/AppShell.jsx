@@ -16,6 +16,15 @@ export default function AppShell({ children, teamName }) {
   return (
     <div className="app">
       <header>
+        <div className="header-bar">
+          <div className="header-bar-dots">
+            <div className="header-bar-dot" />
+            <div className="header-bar-dot" />
+            <div className="header-bar-dot" />
+          </div>
+          <span className="header-bar-title">⚾ BASEBALL STATS v1.0</span>
+          <span style={{fontSize:'.72rem',fontWeight:900}}>[ × ]</span>
+        </div>
         <h1>⚾ {teamName} 成績</h1>
       </header>
       <nav>
