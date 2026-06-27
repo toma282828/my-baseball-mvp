@@ -42,10 +42,51 @@ function ipToOuts(ip) {
   return parseInt(w||0)*3 + parseInt(f||0);
 }
 
+/** 合計から打席を復元（得点圏情報は失われる） */
+function reconstructAtBats(s) {
+  const atBats = [];
+  // 安打・三振・四死球・犠打・犠飛を展開
+  const order = [
+    { result:'hr',   n: s.hr??0   },
+    { result:'s3',   n: s.s3??0   },
+    { result:'s2',   n: s.s2??0   },
+    { result:'s1',   n: s.s1??0   },
+    { result:'bb',   n: s.bb??0   },
+    { result:'bunt', n: s.bunt??0 },
+    { result:'sf',   n: s.sf??0   },
+    { result:'k',    n: s.so_bat??0 },
+  ];
+  for (const { result, n } of order) {
+    for (let i = 0; i < n; i++) atBats.push({ result, risp: false, rbi: 0 });
+  }
+  // 凡退 = 打数 - 安打 - 三振
+  const hits = (s.s1??0)+(s.s2??0)+(s.s3??0)+(s.hr??0);
+  const outs = (s.ab??0) - hits - (s.so_bat??0);
+  for (let i = 0; i < Math.max(0, outs); i++) atBats.push({ result:'out', risp:false, rbi:0 });
+  // 打点を最初のヒットに割り当て（近似）
+  const rbi = s.rbi ?? 0;
+  if (rbi > 0) {
+    const firstHit = atBats.find(ab => HIT_KEYS.includes(ab.result));
+    if (firstHit) firstHit.rbi = rbi;
+    else if (atBats.length > 0) atBats[0].rbi = rbi;
+  }
+  // 得点圏: risp_hit 分を安打に設定
+  const rh = s.risp_hit ?? 0;
+  if (rh > 0) {
+    let remaining = rh;
+    for (const ab of atBats) {
+      if (HIT_KEYS.includes(ab.result) && remaining > 0) {
+        ab.risp = true; remaining--;
+      }
+    }
+  }
+  return atBats;
+}
+
 function makeEntry(playerName) {
   return {
     player_name: playerName,
-    game_position: '',          // 試合内ポジション
+    game_position: '',
     showBat: true,
     showPit: false,
     atBats: [],
@@ -60,31 +101,30 @@ function makeEntry(playerName) {
 
 function entryFromStat(s) {
   return {
-    player_name: s.player_name,
+    player_name:   s.player_name,
     game_position: s.game_position ?? '',
     showBat: s.ab > 0,
     showPit: s.ip_outs > 0 || !!s.decision,
-    atBats: [],
-    manualBat: {
-      ab: s.ab??0, s1: s.s1??0, s2: s.s2??0, s3: s.s3??0,
-      hr: s.hr??0, rbi: s.rbi??0, sb: s.sb??0, bb: s.bb??0,
-      run_scored: s.run_scored??0, so_bat: s.so_bat??0,
-      bunt: s.bunt??0, sf: s.sf??0, cs: s.cs??0,
-      risp_ab: s.risp_ab??0, risp_hit: s.risp_hit??0,
-    },
-    run_scored: s.run_scored??'',
-    sb: s.sb??'', cs: s.cs??'',
+    atBats:  s.ab > 0 ? reconstructAtBats(s) : [],
+    run_scored: s.run_scored ?? '',
+    sb: s.sb ?? '',
+    cs: s.cs ?? '',
     pit: {
-      ip: s.ip_outs ? `${Math.floor(s.ip_outs/3)}.${s.ip_outs%3}` : '',
-      so_p: s.so_p??'', er: s.er??'', decision: s.decision??'',
-      is_start: s.is_start??false, cg: s.cg??false, sho: s.sho??false,
-      h_allowed: s.h_allowed??'', hr_allowed: s.hr_allowed??'',
-      bb_allowed: s.bb_allowed??'', r_allowed: s.r_allowed??'',
+      ip:         s.ip_outs ? `${Math.floor(s.ip_outs/3)}.${s.ip_outs%3}` : '',
+      so_p:       s.so_p ?? '',
+      er:         s.er ?? '',
+      decision:   s.decision ?? '',
+      is_start:   s.is_start ?? false,
+      cg:         s.cg ?? false,
+      sho:        s.sho ?? false,
+      h_allowed:  s.h_allowed ?? '',
+      hr_allowed: s.hr_allowed ?? '',
+      bb_allowed: s.bb_allowed ?? '',
+      r_allowed:  s.r_allowed ?? '',
     },
   };
 }
 
-/** 空の打席編集状態 */
 const EMPTY_PENDING = { result:'out', risp:false, rbi:0 };
 
 export default function GameForm({ players, initialGame, initialStats }) {
@@ -104,12 +144,10 @@ export default function GameForm({ players, initialGame, initialStats }) {
   const [saving,    setSaving]    = useState(false);
   const [error,     setError]     = useState('');
   const [toast,     setToast]     = useState('');
-
-  // { playerName: { result, risp, rbi, editIdx } }  editIdx=-1 なら新規
   const [pendingAB, setPendingAB] = useState({});
 
-  const usedNames  = new Set(entries.map((e) => e.player_name));
-  const available  = players.filter((p) => !usedNames.has(p.name));
+  const usedNames = new Set(entries.map((e) => e.player_name));
+  const available = players.filter((p) => !usedNames.has(p.name));
 
   // ─── エントリ操作 ───
   function addPlayer() {
@@ -127,10 +165,6 @@ export default function GameForm({ players, initialGame, initialStats }) {
   function updatePit(name, field, val) {
     setEntries((prev) => prev.map((e) =>
       e.player_name===name ? {...e, pit:{...e.pit, [field]:val}} : e));
-  }
-  function updateManualBat(name, field, val) {
-    setEntries((prev) => prev.map((e) =>
-      e.player_name===name ? {...e, manualBat:{...e.manualBat, [field]:val}} : e));
   }
 
   // ─── 打席操作 ───
@@ -169,40 +203,28 @@ export default function GameForm({ players, initialGame, initialStats }) {
       e.player_name===name ? {...e, atBats:e.atBats.filter((_,i)=>i!==idx)} : e));
   }
 
-  // ─── ペイロード組み立て ───
+  // ─── ペイロード ───
   function buildPayload() {
     return entries.map((entry) => {
-      let batFields;
-      if (isEdit) {
-        const m = entry.manualBat || {};
-        batFields = {
-          ab: parseInt(m.ab)||0, s1: parseInt(m.s1)||0, s2: parseInt(m.s2)||0,
-          s3: parseInt(m.s3)||0, hr: parseInt(m.hr)||0, rbi: parseInt(m.rbi)||0,
-          bb: parseInt(m.bb)||0, run_scored: parseInt(m.run_scored)||0,
-          so_bat: parseInt(m.so_bat)||0, bunt: parseInt(m.bunt)||0,
-          sf: parseInt(m.sf)||0, cs: parseInt(m.cs)||0,
-          risp_ab: parseInt(m.risp_ab)||0, risp_hit: parseInt(m.risp_hit)||0,
-        };
-      } else {
-        const calc = calcFromAtBats(entry.atBats);
-        batFields = { ...calc, run_scored: parseInt(entry.run_scored)||0, cs: parseInt(entry.cs)||0 };
-      }
+      const calc = calcFromAtBats(entry.atBats);
       return {
-        player_name:  entry.player_name,
+        player_name:   entry.player_name,
         game_position: entry.game_position || null,
-        ...batFields,
-        sb: parseInt(entry.sb)||0,
-        ip_outs:    entry.showPit ? ipToOuts(entry.pit.ip)              : 0,
-        so_p:       entry.showPit ? parseInt(entry.pit.so_p)||0         : 0,
-        er:         entry.showPit ? parseInt(entry.pit.er)||0           : 0,
-        decision:   entry.showPit ? (entry.pit.decision||null)          : null,
-        is_start:   entry.showPit ? !!entry.pit.is_start                : false,
-        cg:         entry.showPit ? !!entry.pit.cg                      : false,
-        sho:        entry.showPit ? !!entry.pit.sho                     : false,
-        h_allowed:  entry.showPit ? parseInt(entry.pit.h_allowed)||0    : 0,
-        hr_allowed: entry.showPit ? parseInt(entry.pit.hr_allowed)||0   : 0,
-        bb_allowed: entry.showPit ? parseInt(entry.pit.bb_allowed)||0   : 0,
-        r_allowed:  entry.showPit ? parseInt(entry.pit.r_allowed)||0    : 0,
+        ...calc,
+        run_scored: parseInt(entry.run_scored)||0,
+        sb:         parseInt(entry.sb)||0,
+        cs:         parseInt(entry.cs)||0,
+        ip_outs:    entry.showPit ? ipToOuts(entry.pit.ip)           : 0,
+        so_p:       entry.showPit ? parseInt(entry.pit.so_p)||0      : 0,
+        er:         entry.showPit ? parseInt(entry.pit.er)||0        : 0,
+        decision:   entry.showPit ? (entry.pit.decision||null)       : null,
+        is_start:   entry.showPit ? !!entry.pit.is_start             : false,
+        cg:         entry.showPit ? !!entry.pit.cg                   : false,
+        sho:        entry.showPit ? !!entry.pit.sho                  : false,
+        h_allowed:  entry.showPit ? parseInt(entry.pit.h_allowed)||0 : 0,
+        hr_allowed: entry.showPit ? parseInt(entry.pit.hr_allowed)||0: 0,
+        bb_allowed: entry.showPit ? parseInt(entry.pit.bb_allowed)||0: 0,
+        r_allowed:  entry.showPit ? parseInt(entry.pit.r_allowed)||0 : 0,
       };
     });
   }
@@ -212,18 +234,17 @@ export default function GameForm({ players, initialGame, initialStats }) {
     if (!date||!opponent.trim()||!ground.trim()||ourScore===''||theirScore==='') {
       setError('試合日・対戦相手・グラウンド・スコアを入力してください'); return;
     }
-    const statsPayload = buildPayload();
     setSaving(true); setError('');
     const game = { date, opponent:opponent.trim(), ground:ground.trim(),
       our_score:parseInt(ourScore), their_score:parseInt(theirScore), result };
     const res = isEdit
       ? await fetch(`/api/games/${initialGame.id}`, {
           method:'PUT', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ game, stats: statsPayload }),
+          body: JSON.stringify({ game, stats: buildPayload() }),
         })
       : await fetch('/api/games', {
           method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ game, stats: statsPayload }),
+          body: JSON.stringify({ game, stats: buildPayload() }),
         });
     const data = await res.json();
     if (data.error) { setError(data.error); setSaving(false); return; }
@@ -267,7 +288,7 @@ export default function GameForm({ players, initialGame, initialStats }) {
         {entries.map((entry) => {
           const pend      = { ...EMPTY_PENDING, editIdx:-1, ...(pendingAB[entry.player_name]||{}) };
           const isEditing = pend.editIdx != null && pend.editIdx >= 0;
-          const calcTotals = !isEdit ? calcFromAtBats(entry.atBats) : null;
+          const calcTotals = calcFromAtBats(entry.atBats);
 
           return (
             <div key={entry.player_name} className="player-entry">
@@ -276,16 +297,14 @@ export default function GameForm({ players, initialGame, initialStats }) {
                 <button type="button" className="remove-player-btn" onClick={()=>removeEntry(entry.player_name)}>削除</button>
               </div>
 
-              {/* ── 試合内ポジション ── */}
+              {/* 試合内ポジション */}
               <div style={{display:'flex',gap:6,alignItems:'center',marginBottom:10}}>
                 <label style={{margin:0,fontSize:'.78rem',minWidth:80}}>試合ポジション</label>
-                <input
-                  type="text"
+                <input type="text"
                   value={entry.game_position}
                   onChange={(e)=>updateEntry(entry.player_name,'game_position',e.target.value)}
-                  placeholder="例: SS　または　SS→3B（守備交代あり）"
-                  style={{flex:1,fontSize:'.82rem',padding:'6px 10px'}}
-                />
+                  placeholder="例: SS　または　SS→3B（交代あり）"
+                  style={{flex:1,fontSize:'.82rem',padding:'6px 10px'}} />
               </div>
 
               {/* 打撃/投手タブ */}
@@ -301,131 +320,109 @@ export default function GameForm({ players, initialGame, initialStats }) {
               {/* ── 打撃 ── */}
               {entry.showBat && (
                 <div>
-                  {isEdit ? (
-                    <>
-                      <div className="stat-type-label">打撃成績（合計を直接入力）</div>
-                      <div className="field-grid">
-                        {[['ab','打数'],['s1','単打'],['s2','二塁打'],['s3','三塁打'],
-                          ['hr','本塁打'],['rbi','打点'],['bb','四死球'],['sb','盗塁'],
-                          ['run_scored','得点'],['so_bat','三振'],['bunt','犠打'],['sf','犠飛'],
-                          ['cs','盗塁死'],['risp_ab','得点圏打数'],['risp_hit','得点圏安打']].map(([f,lbl])=>(
-                          <div key={f}>
-                            <label>{lbl}</label>
-                            <input type="number" min={0}
-                              value={entry.manualBat?.[f]??''}
-                              onChange={(ev)=>updateManualBat(entry.player_name,f,ev.target.value)} />
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="stat-type-label">打撃成績（1打席ごと入力）</div>
+                  <div className="stat-type-label">打撃成績（1打席ごと入力）</div>
 
-                      {/* 記録済み打席 */}
-                      {entry.atBats.length > 0 && (
-                        <div style={{marginBottom:10}}>
-                          {entry.atBats.map((ab, idx) => {
-                            const def = AB_RESULTS.find(r=>r.key===ab.result);
-                            const isEditingThis = pend.editIdx === idx;
-                            return (
-                              <span key={idx}
-                                onClick={()=>openEditAB(entry.player_name, idx)}
-                                title="タップして修正"
-                                style={{
-                                  display:'inline-flex', alignItems:'center', gap:3,
-                                  background: isEditingThis ? '#fff8e1' : (def?.color ?? '#f5f5f5'),
-                                  border: isEditingThis ? '2px solid #f9a825' : '1px solid #ddd',
-                                  borderRadius:8, padding:'4px 10px', margin:'3px',
-                                  fontSize:'.72rem', fontWeight:600, cursor:'pointer',
-                                }}>
-                                <span style={{color:'#aaa',fontSize:'.6rem',marginRight:2}}>第{idx+1}</span>
-                                {def?.label}
-                                {ab.risp && <span style={{color:'#e65100',fontSize:'.6rem'}}>圏</span>}
-                                {ab.rbi > 0 && <span style={{color:'#1b5e20',fontSize:'.6rem'}}>{ab.rbi}点</span>}
-                                <button type="button"
-                                  onClick={(e)=>{e.stopPropagation();removeAB(entry.player_name,idx);}}
-                                  style={{background:'none',border:'none',cursor:'pointer',color:'#bbb',fontSize:'.65rem',padding:0,lineHeight:1}}>×</button>
-                              </span>
-                            );
-                          })}
-                        </div>
+                  {/* 記録済み打席 */}
+                  {entry.atBats.length > 0 && (
+                    <div style={{marginBottom:10}}>
+                      {entry.atBats.map((ab, idx) => {
+                        const def = AB_RESULTS.find(r=>r.key===ab.result);
+                        const isEditingThis = pend.editIdx === idx;
+                        return (
+                          <span key={idx}
+                            onClick={()=>openEditAB(entry.player_name, idx)}
+                            title="タップして修正"
+                            style={{
+                              display:'inline-flex', alignItems:'center', gap:3,
+                              background: isEditingThis ? '#fff8e1' : (def?.color ?? '#f5f5f5'),
+                              border: isEditingThis ? '2px solid #f9a825' : '1px solid #ddd',
+                              borderRadius:8, padding:'4px 10px', margin:'3px',
+                              fontSize:'.72rem', fontWeight:600, cursor:'pointer',
+                            }}>
+                            <span style={{color:'#aaa',fontSize:'.6rem',marginRight:2}}>第{idx+1}</span>
+                            {def?.label}
+                            {ab.risp && <span style={{color:'#e65100',fontSize:'.6rem'}}>圏</span>}
+                            {ab.rbi > 0 && <span style={{color:'#1b5e20',fontSize:'.6rem'}}>{ab.rbi}点</span>}
+                            <button type="button"
+                              onClick={(e)=>{e.stopPropagation();removeAB(entry.player_name,idx);}}
+                              style={{background:'none',border:'none',cursor:'pointer',color:'#bbb',fontSize:'.65rem',padding:0,lineHeight:1}}>×</button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* 打席入力フォーム */}
+                  <div style={{
+                    background: isEditing ? '#fff8e1' : '#f9f9f9',
+                    border: isEditing ? '1.5px solid #f9a825' : '1px solid #e8e8e8',
+                    borderRadius:10, padding:10, marginBottom:8,
+                  }}>
+                    <div className="stat-type-label" style={{margin:'0 0 6px'}}>
+                      {isEditing ? `第${pend.editIdx+1}打席を修正中` : `第${entry.atBats.length+1}打席を追加`}
+                    </div>
+                    <div style={{display:'flex',flexWrap:'wrap',gap:4,marginBottom:8}}>
+                      {AB_RESULTS.map((r)=>(
+                        <button key={r.key} type="button"
+                          onClick={()=>setPending(entry.player_name,'result',r.key)}
+                          style={{
+                            fontSize:'.72rem', padding:'5px 10px', borderRadius:8,
+                            border: pend.result===r.key ? '2px solid var(--green-700)' : '1px solid #ccc',
+                            background: pend.result===r.key ? 'var(--green-100)' : '#fff',
+                            fontWeight: pend.result===r.key ? 700 : 400,
+                          }}>
+                          {r.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',marginBottom:8}}>
+                      <label style={{display:'flex',alignItems:'center',gap:4,margin:0,fontWeight:400,fontSize:'.78rem'}}>
+                        <input type="checkbox" checked={pend.risp||false}
+                          onChange={(e)=>setPending(entry.player_name,'risp',e.target.checked)}
+                          style={{width:'auto'}} />
+                        得点圏（RISP）
+                      </label>
+                      <label style={{display:'flex',alignItems:'center',gap:4,margin:0,fontWeight:400,fontSize:'.78rem'}}>
+                        打点:
+                        <input type="number" min={0} max={9} value={pend.rbi||0}
+                          onChange={(e)=>setPending(entry.player_name,'rbi',parseInt(e.target.value)||0)}
+                          style={{width:44,padding:'4px 6px',fontSize:'.82rem'}} />
+                      </label>
+                    </div>
+                    <div style={{display:'flex',gap:6}}>
+                      <button type="button" className="btn btn-sm btn-outline"
+                        onClick={()=>commitAB(entry.player_name)}>
+                        {isEditing ? '修正する' : '追加する'}
+                      </button>
+                      {isEditing && (
+                        <button type="button" className="btn btn-sm btn-outline" style={{color:'#777'}}
+                          onClick={()=>setPendingAB((prev)=>({...prev,[entry.player_name]:{...EMPTY_PENDING,editIdx:-1}}))}>
+                          キャンセル
+                        </button>
                       )}
+                    </div>
+                  </div>
 
-                      {/* 打席入力フォーム */}
-                      <div style={{
-                        background: isEditing ? '#fff8e1' : '#f9f9f9',
-                        border: isEditing ? '1.5px solid #f9a825' : '1px solid #e8e8e8',
-                        borderRadius:10, padding:10, marginBottom:8,
-                      }}>
-                        <div className="stat-type-label" style={{margin:'0 0 6px'}}>
-                          {isEditing ? `第${pend.editIdx+1}打席を修正中` : `第${entry.atBats.length+1}打席を追加`}
-                        </div>
-                        <div style={{display:'flex',flexWrap:'wrap',gap:4,marginBottom:8}}>
-                          {AB_RESULTS.map((r)=>(
-                            <button key={r.key} type="button"
-                              onClick={()=>setPending(entry.player_name,'result',r.key)}
-                              style={{
-                                fontSize:'.72rem', padding:'5px 10px', borderRadius:8,
-                                border: pend.result===r.key ? '2px solid var(--green-700)' : '1px solid #ccc',
-                                background: pend.result===r.key ? 'var(--green-100)' : '#fff',
-                                fontWeight: pend.result===r.key ? 700 : 400,
-                              }}>
-                              {r.label}
-                            </button>
-                          ))}
-                        </div>
-                        <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',marginBottom:8}}>
-                          <label style={{display:'flex',alignItems:'center',gap:4,margin:0,fontWeight:400,fontSize:'.78rem'}}>
-                            <input type="checkbox" checked={pend.risp||false}
-                              onChange={(e)=>setPending(entry.player_name,'risp',e.target.checked)}
-                              style={{width:'auto'}} />
-                            得点圏（RISP）
-                          </label>
-                          <label style={{display:'flex',alignItems:'center',gap:4,margin:0,fontWeight:400,fontSize:'.78rem'}}>
-                            打点:
-                            <input type="number" min={0} max={9} value={pend.rbi||0}
-                              onChange={(e)=>setPending(entry.player_name,'rbi',parseInt(e.target.value)||0)}
-                              style={{width:44,padding:'4px 6px',fontSize:'.82rem'}} />
-                          </label>
-                        </div>
-                        <div style={{display:'flex',gap:6}}>
-                          <button type="button" className="btn btn-sm btn-outline"
-                            onClick={()=>commitAB(entry.player_name)}>
-                            {isEditing ? '修正する' : '追加する'}
-                          </button>
-                          {isEditing && (
-                            <button type="button" className="btn btn-sm btn-outline"
-                              style={{color:'#777'}}
-                              onClick={()=>setPendingAB((prev)=>({...prev,[entry.player_name]:{...EMPTY_PENDING,editIdx:-1}}))}>
-                              キャンセル
-                            </button>
-                          )}
-                        </div>
+                  {/* 得点・盗塁 */}
+                  <div className="row2" style={{gap:6}}>
+                    {[['run_scored','得点'],['sb','盗塁'],['cs','盗塁死']].map(([f,lbl])=>(
+                      <div key={f}>
+                        <label style={{fontSize:'.72rem'}}>{lbl}</label>
+                        <input type="number" min={0} value={entry[f]||''}
+                          onChange={(e)=>updateEntry(entry.player_name,f,e.target.value)} />
                       </div>
+                    ))}
+                  </div>
 
-                      {/* 得点・盗塁別入力 */}
-                      <div className="row2" style={{gap:6}}>
-                        {[['run_scored','得点'],['sb','盗塁'],['cs','盗塁死']].map(([f,lbl])=>(
-                          <div key={f}>
-                            <label style={{fontSize:'.72rem'}}>{lbl}</label>
-                            <input type="number" min={0} value={entry[f]||''}
-                              onChange={(e)=>updateEntry(entry.player_name,f,e.target.value)} />
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* サマリー */}
-                      {entry.atBats.length > 0 && calcTotals && (
-                        <p className="hint" style={{marginTop:4}}>
-                          {calcTotals.ab}打数{calcTotals.s1+calcTotals.s2+calcTotals.s3+calcTotals.hr}安打
-                          {calcTotals.hr>0?` ${calcTotals.hr}HR`:''} {calcTotals.rbi}打点
-                          　{calcTotals.bb}四死球
-                          {calcTotals.so_bat>0?` ${calcTotals.so_bat}三振`:''}
-                          {calcTotals.risp_ab>0?` 得点圏${calcTotals.risp_hit}/${calcTotals.risp_ab}`:''}
-                        </p>
-                      )}
-                    </>
+                  {/* サマリー */}
+                  {entry.atBats.length > 0 && (
+                    <p className="hint" style={{marginTop:4}}>
+                      {calcTotals.ab}打数{calcTotals.s1+calcTotals.s2+calcTotals.s3+calcTotals.hr}安打
+                      {calcTotals.hr>0?` ${calcTotals.hr}HR`:''} {calcTotals.rbi}打点
+                      　{calcTotals.bb}四死球
+                      {calcTotals.so_bat>0?` ${calcTotals.so_bat}三振`:''}
+                      {calcTotals.risp_ab>0?` 得点圏${calcTotals.risp_hit}/${calcTotals.risp_ab}`:''}
+                    </p>
                   )}
                 </div>
               )}
