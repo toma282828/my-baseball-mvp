@@ -207,7 +207,7 @@ export default function GameForm({ players, initialGame, initialStats }) {
   // ─── ペイロード ───
   function buildPayload() {
     return entries.map((entry) => {
-      const calc = calcFromAtBats(entry.atBats);
+      const calc = entry.showBat ? calcFromAtBats(entry.atBats) : { ab:0,s1:0,s2:0,s3:0,hr:0,bb:0,so_bat:0,bunt:0,sf:0,rbi:0,risp_ab:0,risp_hit:0 };
       return {
         player_name:   entry.player_name,
         game_position: entry.game_position || null,
