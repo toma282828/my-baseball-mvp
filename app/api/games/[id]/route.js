@@ -39,9 +39,7 @@ export async function PUT(request, { params }) {
     if (statsErr) return NextResponse.json({ error: statsErr.message }, { status: 500 });
   }
 
-  revalidatePath('/');
-  revalidatePath('/games');
-  revalidatePath(`/games/${id}`);
+  revalidatePath('/', 'layout');
   return NextResponse.json({ ok: true });
 }
 
@@ -53,7 +51,6 @@ export async function DELETE(request, { params }) {
   const { error } = await supabase.from('games').delete().eq('id', id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  revalidatePath('/');
-  revalidatePath('/games');
+  revalidatePath('/', 'layout');
   return NextResponse.json({ ok: true });
 }

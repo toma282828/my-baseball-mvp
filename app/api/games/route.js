@@ -37,7 +37,6 @@ export async function POST(request) {
     if (statsErr) return NextResponse.json({ error: statsErr.message }, { status: 500 });
   }
 
-  revalidatePath('/');
-  revalidatePath('/games');
+  revalidatePath('/', 'layout');
   return NextResponse.json({ id: gameData.id });
 }
