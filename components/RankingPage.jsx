@@ -2,121 +2,115 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { buildRankings, buildTeamRecord, fmtJersey } from '@/lib/stats';
+import { buildRankings, buildTeamRecord, fmtJersey, QUALIFIED_PA_PER_GAME, QUALIFIED_IP_PER_GAME, outsToIp } from '@/lib/stats';
 
-const PREVIEW = 5;
+const DISPLAY_N = 5;
 
-export default function RankingPage({ players, games, stats, initialYear }) {
-  const [year, setYear] = useState(initialYear);
-  const [tab, setTab] = useState('bat');
+export default function RankingPage({ players, stats, games, initialYear }) {
+  const years = [...new Set(games.map((g) => parseInt(g.date.slice(0, 4), 10)))]
+    .sort((a, b) => b - a);
+  if (years.length === 0) years.push(initialYear ?? new Date().getFullYear());
+  const [year, setYear] = useState(years[0]);
+  const [tab,    setTab]    = useState('bat');
   const [batCat, setBatCat] = useState('avg');
   const [pitCat, setPitCat] = useState('era');
-  const [expanded, setExpanded] = useState(false);
+  const [expand, setExpand] = useState(false);
 
   const rankings = buildRankings(players, stats, games, year);
-  const record = buildTeamRecord(games, year);
-  const { BAT_CATS, PIT_CATS, qualifiedPA, gameCount } = rankings;
-  const currentCatObj = (tab === 'bat' ? BAT_CATS : PIT_CATS).find(c => c.key === (tab === 'bat' ? batCat : pitCat));
+  const record   = buildTeamRecord(games, year);
+  const { BAT_CATS, PIT_CATS, qualifiedPA, qualifiedIPOuts, gameCount } = rankings;
 
-  const currentCats = tab === 'bat' ? BAT_CATS : PIT_CATS;
-  const currentCat = tab === 'bat' ? batCat : pitCat;
-  const rows = tab === 'bat' ? (rankings.bat[batCat] ?? []) : (rankings.pit[pitCat] ?? []);
-  const displayRows = expanded ? rows : rows.slice(0, PREVIEW);
+  const currentCat = tab === 'bat'
+    ? BAT_CATS.find((c) => c.key === batCat)
+    : PIT_CATS.find((c) => c.key === pitCat);
 
-  const years = [];
-  const gameYears = games.map((g) => parseInt(g.date.slice(0, 4)));
-  const minYear = gameYears.length ? Math.min(...gameYears) : initialYear;
-  for (let y = initialYear; y >= Math.max(minYear, initialYear - 5); y--) years.push(y);
+  const rows       = (tab === 'bat' ? rankings.bat[batCat] : rankings.pit[pitCat]) ?? [];
+  const displayRows = expand ? rows : rows.slice(0, DISPLAY_N);
 
   return (
     <div>
-      {/* 年度セレクタ */}
+      {/* 年選択 */}
       <div className="year-toolbar">
         {years.map((y) => (
-          <button key={y} onClick={() => { setYear(y); setExpanded(false); }}
-            className={y === year ? 'active' : ''}>
+          <button key={y} onClick={() => setYear(y)} className={y === year ? 'active' : ''}>
             {y}年
           </button>
         ))}
       </div>
 
       {/* チーム成績 */}
-      <div className="card">
-        <div className="team-stats">
-          <div>
-            <div className="val">{record.win}</div>
-            <div className="lbl">勝利</div>
-          </div>
-          <div>
-            <div className="val">{record.lose}</div>
-            <div className="lbl">敗戦</div>
-          </div>
-          <div>
-            <div className="val">{record.winPct}</div>
-            <div className="lbl">勝率</div>
-          </div>
+      <div className="card" style={{padding:0,marginBottom:12}}>
+        <div className="team-stats" style={{padding:'12px 8px'}}>
+          {[['勝','w',record.win],['負','l',record.lose],['分','d',record.draw]].map(([lbl,cls,v])=>(
+            <div key={cls}>
+              <div className="val">{v}</div>
+              <div className="lbl">{lbl}</div>
+            </div>
+          ))}
         </div>
-        <p className="hint" style={{textAlign:'center',marginTop:8}}>{year}年度 チーム成績（{record.total}試合）</p>
       </div>
 
-      {/* 打撃/投手タブ */}
+      {/* メインタブ */}
       <div className="tabs">
-        {[['bat','打撃'],['pit','投手']].map(([t, lbl]) => (
-          <button key={t} onClick={() => { setTab(t); setExpanded(false); }}
-            className={tab === t ? 'active' : ''}>{lbl}</button>
-        ))}
+        <button onClick={() => setTab('bat')} className={tab === 'bat' ? 'active' : ''}>野手</button>
+        <button onClick={() => setTab('pit')} className={tab === 'pit' ? 'active' : ''}>投手</button>
       </div>
 
-      {/* 部門タブ */}
+      {/* カテゴリタブ */}
       <div className="cat-tabs">
-        {currentCats.map((cat) => (
-          <button key={cat.key}
-            onClick={() => { tab === 'bat' ? setBatCat(cat.key) : setPitCat(cat.key); setExpanded(false); }}
-            className={currentCat === cat.key ? 'active' : ''}>
-            {cat.label}
+        {(tab === 'bat' ? BAT_CATS : PIT_CATS).map((c) => (
+          <button
+            key={c.key}
+            onClick={() => { tab === 'bat' ? setBatCat(c.key) : setPitCat(c.key); setExpand(false); }}
+            className={(tab === 'bat' ? batCat : pitCat) === c.key ? 'active' : ''}
+          >
+            {c.label}
           </button>
         ))}
       </div>
 
-      {/* 規定打席・ランキング表 */}
+      {/* 規定打席/投球回ヒント */}
       {tab === 'bat' && gameCount > 0 && (
         <p className="hint" style={{marginBottom:6}}>
-          {currentCatObj?.needsQualified
-            ? `※ 規定打席（${qualifiedPA}打席＝${gameCount}試合×2）に達した選手のみ表示`
-            : '※ 全選手対象（規定打席不問）'}
+          {currentCat?.needsQualified
+            ? `※ 規定打席（${qualifiedPA}打席＝${gameCount}試合×${QUALIFIED_PA_PER_GAME}）達成選手のみ`
+            : '※ 全選手対象'}
         </p>
       )}
+      {tab === 'pit' && gameCount > 0 && (
+        <p className="hint" style={{marginBottom:6}}>
+          {currentCat?.needsQualifiedIP
+            ? `※ 規定投球回（${outsToIp(qualifiedIPOuts)}回＝${gameCount}試合×${QUALIFIED_IP_PER_GAME}）達成選手のみ`
+            : '※ 全選手対象'}
+        </p>
+      )}
+
+      {/* ランキング表 */}
       <div className="card" style={{padding:0,overflow:'hidden'}}>
         {displayRows.length === 0 ? (
-          <p className="hint" style={{textAlign:'center',padding:'24px 0'}}>
-            {tab === 'bat' && currentCatObj?.needsQualified && gameCount > 0
-              ? `規定打席（${qualifiedPA}打席）に達した選手がいません`
-              : 'データがありません'}
-          </p>
+          <p className="hint" style={{textAlign:'center',padding:'24px 0'}}>データがありません</p>
         ) : (
           <table className="rank-table">
             <thead>
               <tr>
-                <th style={{width:32}}>順位</th>
+                <th style={{width:28}}>順</th>
                 <th>選手</th>
-                <th style={{textAlign:'right'}}>{currentCats.find(c=>c.key===currentCat)?.label}</th>
+                <th style={{textAlign:'right'}}>{currentCat?.label ?? ''}</th>
               </tr>
             </thead>
             <tbody>
-              {displayRows.map((r) => (
-                <tr key={r.name}>
-                  <td style={{color:'#999',fontWeight:600}}>{r.rank}</td>
+              {displayRows.map((row) => (
+                <tr key={row.name}>
+                  <td className={row.rank === 1 ? 'rank-1' : ''}>{row.rank}</td>
                   <td>
-                    <Link href={`/players/${encodeURIComponent(r.name)}`} className="player-link">
-                      <span style={{fontSize:'.7rem',color:'#aaa',marginRight:4}}>
-                        #{fmtJersey(r.jersey_num, r.jersey_double_zero)}
+                    <Link href={`/players/${encodeURIComponent(row.name)}`} style={{textDecoration:'none',color:'inherit'}}>
+                      <span style={{color:'#aaa',fontSize:'.75rem',marginRight:4}}>
+                        #{fmtJersey(row.jersey_num, row.jersey_double_zero)}
                       </span>
-                      {r.name}
+                      {row.name}
                     </Link>
                   </td>
-                  <td style={{textAlign:'right',fontWeight:700,color:'var(--green-700)'}}>
-                    {r.display}
-                  </td>
+                  <td style={{textAlign:'right',fontWeight:600}}>{row.display}</td>
                 </tr>
               ))}
             </tbody>
@@ -124,10 +118,10 @@ export default function RankingPage({ players, games, stats, initialYear }) {
         )}
       </div>
 
-      {rows.length > PREVIEW && (
-        <button className="btn btn-outline expand-btn"
-          onClick={() => setExpanded(!expanded)}>
-          {expanded ? '上位5人だけ表示' : `全${rows.length}人を見る`}
+      {rows.length > DISPLAY_N && (
+        <button className="btn btn-sm btn-outline" style={{marginTop:8,width:'100%'}}
+          onClick={() => setExpand((v) => !v)}>
+          {expand ? '▲ 閉じる' : `▼ もっと見る（全${rows.length}件）`}
         </button>
       )}
     </div>

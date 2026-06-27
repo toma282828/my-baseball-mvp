@@ -2,8 +2,16 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getAppData } from '@/lib/db';
 import { aggregateBatting, aggregatePitching, fmtAvg, fmtEra, outsToIp, fmtJersey, buildAllAwards } from '@/lib/stats';
-import { getTodayYear } from '@/lib/date';
-import { formatDate } from '@/lib/date';
+import { formatDate, getTodayYear } from '@/lib/date';
+
+function StatCard({ label, value }) {
+  return (
+    <div className="card" style={{margin:0,padding:'10px 12px'}}>
+      <span className="lbl">{label}</span>
+      <span className="val">{value ?? '—'}</span>
+    </div>
+  );
+}
 
 export default async function PlayerPage({ params }) {
   const { name: encodedName } = await params;
@@ -14,8 +22,8 @@ export default async function PlayerPage({ params }) {
   if (!player) notFound();
 
   const currentYear = getTodayYear();
-  const allAwards = buildAllAwards(players, stats, games, currentYear);
-  const myAwards = allAwards[name] || [];
+  const allAwards   = buildAllAwards(players, stats, games, currentYear);
+  const myAwards    = allAwards[name] || [];
 
   const playerStats = stats.filter((s) => s.player_name === name);
   const bat = aggregateBatting(playerStats);
@@ -43,9 +51,7 @@ export default async function PlayerPage({ params }) {
         {myAwards.length > 0 && (
           <div className="player-titles">
             {myAwards.map((a, i) => (
-              <span key={i} className={`king-badge${a.golden ? ' golden' : ''}`}>
-                {a.label}
-              </span>
+              <span key={i} className={`king-badge${a.golden?' golden':''}`}>{a.label}</span>
             ))}
           </div>
         )}
@@ -56,25 +62,28 @@ export default async function PlayerPage({ params }) {
         <>
           <h3>打撃成績（累計）</h3>
           <div className="stat-grid">
-            {[
-              { label: '打率',   value: fmtAvg(bat.avg) },
-              { label: '安打',   value: bat.hit },
-              { label: '打数',   value: bat.ab },
-              { label: '本塁打', value: bat.hr },
-              { label: '打点',   value: bat.rbi },
-              { label: '盗塁',   value: bat.sb },
-              { label: '四死球', value: bat.bb },
-              { label: '二塁打', value: bat.s2 },
-              { label: '三塁打', value: bat.s3 },
-              { label: '出塁率', value: fmtAvg(bat.obp) },
-              { label: '長打率', value: fmtAvg(bat.slg) },
-              { label: 'OPS',    value: bat.ops?.toFixed(3) ?? '—' },
-            ].map(({ label, value }) => (
-              <div key={label} className="card" style={{margin:0,padding:'10px 12px'}}>
-                <span className="lbl">{label}</span>
-                <span className="val">{value ?? '—'}</span>
-              </div>
-            ))}
+            <StatCard label="打率"       value={fmtAvg(bat.avg)} />
+            <StatCard label="安打"       value={bat.hit} />
+            <StatCard label="打数"       value={bat.ab} />
+            <StatCard label="打席数"     value={bat.pa} />
+            <StatCard label="本塁打"     value={bat.hr} />
+            <StatCard label="打点"       value={bat.rbi} />
+            <StatCard label="得点"       value={bat.run_scored} />
+            <StatCard label="塁打"       value={bat.tb} />
+            <StatCard label="盗塁"       value={bat.sb} />
+            <StatCard label="盗塁死"     value={bat.cs} />
+            <StatCard label="四死球"     value={bat.bb} />
+            <StatCard label="三振"       value={bat.so_bat} />
+            <StatCard label="犠打"       value={bat.bunt} />
+            <StatCard label="犠飛"       value={bat.sf} />
+            <StatCard label="二塁打"     value={bat.s2} />
+            <StatCard label="三塁打"     value={bat.s3} />
+            <StatCard label="出塁率"     value={fmtAvg(bat.obp)} />
+            <StatCard label="長打率"     value={fmtAvg(bat.slg)} />
+            <StatCard label="OPS"        value={bat.ops?.toFixed(3) ?? '—'} />
+            {bat.risp_ab > 0 && (
+              <StatCard label="得点圏打率" value={`${fmtAvg(bat.risp_avg)}（${bat.risp_hit}/${bat.risp_ab}）`} />
+            )}
           </div>
         </>
       )}
@@ -84,19 +93,25 @@ export default async function PlayerPage({ params }) {
         <>
           <h3>投手成績（累計）</h3>
           <div className="stat-grid">
-            {[
-              { label: '防御率', value: fmtEra(pit.era) },
-              { label: '勝利',   value: pit.win },
-              { label: '敗戦',   value: pit.lose },
-              { label: 'セーブ', value: pit.sv },
-              { label: '奪三振', value: pit.so },
-              { label: '投球回', value: outsToIp(pit.ipOuts) },
-            ].map(({ label, value }) => (
-              <div key={label} className="card" style={{margin:0,padding:'10px 12px'}}>
-                <span className="lbl">{label}</span>
-                <span className="val">{value ?? '—'}</span>
-              </div>
-            ))}
+            <StatCard label="防御率"   value={fmtEra(pit.era)} />
+            <StatCard label="勝率"     value={pit.win_pct != null ? fmtAvg(pit.win_pct) : '—'} />
+            <StatCard label="勝利"     value={pit.win} />
+            <StatCard label="敗戦"     value={pit.lose} />
+            <StatCard label="セーブ"   value={pit.sv} />
+            <StatCard label="ホールド" value={pit.hold} />
+            <StatCard label="HP"       value={pit.hp} />
+            <StatCard label="奪三振"   value={pit.so} />
+            <StatCard label="投球回"   value={outsToIp(pit.ipOuts)} />
+            <StatCard label="登板数"   value={pit.appearances} />
+            <StatCard label="先発"     value={pit.starts} />
+            <StatCard label="リリーフ" value={pit.reliefs} />
+            <StatCard label="完投"     value={pit.cg} />
+            <StatCard label="完封"     value={pit.sho} />
+            <StatCard label="被安打"   value={pit.h_allowed} />
+            <StatCard label="被本塁打" value={pit.hr_allowed} />
+            <StatCard label="与四死球" value={pit.bb_allowed} />
+            <StatCard label="失点"     value={pit.r_allowed} />
+            <StatCard label="自責点"   value={pit.er} />
           </div>
         </>
       )}
@@ -120,12 +135,15 @@ export default async function PlayerPage({ params }) {
                 </div>
                 {hasBatRow && (
                   <div className="game-card-score" style={{fontSize:'.88rem'}}>
-                    打: {s.ab}打数{s.s1+s.s2+s.s3+s.hr}安打 {s.hr>0?`${s.hr}HR `:''}{s.rbi}打点{s.sb>0?` ${s.sb}盗塁`:''}
+                    打: {s.ab}打数{s.s1+s.s2+s.s3+s.hr}安打
+                    {s.hr>0?` ${s.hr}HR`:''} {s.rbi}打点
+                    {s.sb>0?` ${s.sb}盗塁`:''}
                   </div>
                 )}
                 {hasPitRow && (
                   <div className="game-card-ground">
-                    投: {outsToIp(s.ip_outs)}回 {s.er}自責 {s.so_p}K {s.decision ?? ''}
+                    投: {outsToIp(s.ip_outs)}回 {s.er}自責 {s.so_p}K {s.decision??''}
+                    {s.is_start?'（先発）':'（リリーフ）'}
                   </div>
                 )}
               </Link>
