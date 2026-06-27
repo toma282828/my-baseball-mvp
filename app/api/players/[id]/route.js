@@ -26,6 +26,7 @@ export async function PATCH(request, { params }) {
 
   revalidatePath('/');
   revalidatePath('/admin');
+  revalidatePath('/players');
   return NextResponse.json({ ok: true });
 }
 
@@ -39,5 +40,6 @@ export async function DELETE(request, { params }) {
 
   revalidatePath('/');
   revalidatePath('/admin');
+  revalidatePath('/players');
   return NextResponse.json({ ok: true });
 }
