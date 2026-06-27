@@ -28,7 +28,7 @@ export default async function PlayerPage({ params }) {
   const playerStats = stats.filter((s) => s.player_name === name);
   const bat = aggregateBatting(playerStats);
   const pit = aggregatePitching(playerStats);
-  const hasBat = playerStats.some((r) => r.ab > 0);
+  const hasBat = playerStats.some((r) => r.ab > 0 || (r.bb ?? 0) > 0 || (r.bunt ?? 0) > 0 || (r.sf ?? 0) > 0);
   const hasPit = playerStats.some((r) => r.ip_outs > 0 || r.decision);
 
   const gameMap = Object.fromEntries(games.map((g) => [g.id, g]));
@@ -43,11 +43,11 @@ export default async function PlayerPage({ params }) {
 
       {/* 選手カード */}
       <div className="card" style={{textAlign:'center'}}>
-        <div style={{fontSize:'2rem',fontWeight:700,color:'var(--green-900)'}}>
+        <div style={{fontSize:'2rem',fontWeight:700}}>
           #{fmtJersey(player.jersey_num, player.jersey_double_zero)}
         </div>
         <div style={{fontSize:'1.1rem',fontWeight:600}}>{player.name}</div>
-        <div style={{fontSize:'.8rem',color:'#888',marginTop:4}}>{player.position}</div>
+        <div style={{fontSize:'.8rem',opacity:.6,marginTop:4}}>{player.position}</div>
         {myAwards.length > 0 && (
           <div className="player-titles">
             {myAwards.map((a, i) => (
