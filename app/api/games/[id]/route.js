@@ -48,6 +48,9 @@ export async function DELETE(request, { params }) {
   const { id } = await params;
   const supabase = getSupabase();
 
+  // game_stats を先に削除（外部キー制約なしの場合も孤立レコードを防ぐ）
+  await supabase.from('game_stats').delete().eq('game_id', id);
+
   const { error } = await supabase.from('games').delete().eq('id', id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

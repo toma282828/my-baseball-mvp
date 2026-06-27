@@ -25,16 +25,16 @@ export default async function PlayerPage({ params }) {
   const allAwards   = buildAllAwards(players, stats, games, currentYear);
   const myAwards    = allAwards[name] || [];
 
-  const playerStats = stats.filter((s) => s.player_name === name);
+  const gameMap = Object.fromEntries(games.map((g) => [g.id, g]));
+  // 存在する試合のみ対象（削除済み試合の孤立データを除外）
+  const playerStats = stats.filter((s) => s.player_name === name && gameMap[s.game_id]);
   const bat = aggregateBatting(playerStats);
   const pit = aggregatePitching(playerStats);
   const hasBat = playerStats.some((r) => r.ab > 0 || (r.bb ?? 0) > 0 || (r.bunt ?? 0) > 0 || (r.sf ?? 0) > 0);
   const hasPit = playerStats.some((r) => r.ip_outs > 0 || r.decision);
 
-  const gameMap = Object.fromEntries(games.map((g) => [g.id, g]));
   const gameHistory = playerStats
     .map((s) => ({ ...s, game: gameMap[s.game_id] }))
-    .filter((s) => s.game)
     .sort((a, b) => b.game.date.localeCompare(a.game.date));
 
   return (
