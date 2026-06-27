@@ -6,15 +6,15 @@ import { getTodayString } from '@/lib/date';
 import { fmtJersey } from '@/lib/stats';
 
 const AB_RESULTS = [
-  { key:'s1',   label:'単打',   color:'#e8f5e9' },
-  { key:'s2',   label:'二塁打', color:'#e8f5e9' },
-  { key:'s3',   label:'三塁打', color:'#e8f5e9' },
-  { key:'hr',   label:'本塁打', color:'#fff3e0' },
-  { key:'k',    label:'三振',   color:'#ffebee' },
-  { key:'out',  label:'凡退',   color:'#f5f5f5' },
-  { key:'bb',   label:'四死球', color:'#e3f2fd' },
-  { key:'bunt', label:'犠打',   color:'#f3e5f5' },
-  { key:'sf',   label:'犠飛',   color:'#f3e5f5' },
+  { key:'s1',   label:'単打',   bg:'#1b8a00', color:'#fff' },
+  { key:'s2',   label:'二塁打', bg:'#9b30ff', color:'#fff' },
+  { key:'s3',   label:'三塁打', bg:'#ff3cca', color:'#fff' },
+  { key:'hr',   label:'本塁打', bg:'#ff6a00', color:'#fff' },
+  { key:'k',    label:'三振',   bg:'#ff2244', color:'#fff' },
+  { key:'out',  label:'凡退',   bg:'rgba(255,255,255,0.08)', color:'#aaa', border:'1px solid #555' },
+  { key:'bb',   label:'四死球', bg:'#1565c0', color:'#fff' },
+  { key:'bunt', label:'犠打',   bg:'#555',    color:'#fff' },
+  { key:'sf',   label:'犠飛',   bg:'#555',    color:'#fff' },
 ];
 
 const NON_AB_KEYS = ['bb', 'bunt', 'sf'];
@@ -334,10 +334,11 @@ export default function GameForm({ players, initialGame, initialStats }) {
                             title="タップして修正"
                             style={{
                               display:'inline-flex', alignItems:'center', gap:3,
-                              background: isEditingThis ? '#fff8e1' : (def?.color ?? '#f5f5f5'),
-                              border: isEditingThis ? '2px solid #f9a825' : '1px solid #ddd',
+                              background: isEditingThis ? 'rgba(249,168,37,0.3)' : (def?.bg ?? '#444'),
+                              border: isEditingThis ? '2px solid #f9a825' : (def?.border ?? 'none'),
+                              color: isEditingThis ? '#f9a825' : (def?.color ?? '#fff'),
                               borderRadius:8, padding:'4px 10px', margin:'3px',
-                              fontSize:'.72rem', fontWeight:600, cursor:'pointer',
+                              fontSize:'.72rem', fontWeight:800, cursor:'pointer',
                             }}>
                             <span style={{color:'#aaa',fontSize:'.6rem',marginRight:2}}>第{idx+1}</span>
                             {def?.label}
@@ -354,41 +355,42 @@ export default function GameForm({ players, initialGame, initialStats }) {
 
                   {/* 打席入力フォーム */}
                   <div style={{
-                    background: isEditing ? '#fff8e1' : '#f9f9f9',
-                    border: isEditing ? '1.5px solid #f9a825' : '1px solid #e8e8e8',
+                    background: isEditing ? 'rgba(249,168,37,0.1)' : 'var(--ink-card,#1a1a24)',
+                    border: isEditing ? '1.5px solid #f9a825' : '1px solid var(--ink-border,#2a2a38)',
                     borderRadius:10, padding:10, marginBottom:8,
                   }}>
                     <div className="stat-type-label" style={{margin:'0 0 6px'}}>
                       {isEditing ? `第${pend.editIdx+1}打席を修正中` : `第${entry.atBats.length+1}打席を追加`}
                     </div>
                     <div style={{display:'flex',flexWrap:'wrap',gap:4,marginBottom:8}}>
-                      {AB_RESULTS.map((r)=>(
-                        <button key={r.key} type="button"
-                          onClick={()=>setPending(entry.player_name,'result',r.key)}
-                          style={{
-                            fontSize:'.72rem', padding:'5px 10px', borderRadius:8,
-                            border: pend.result===r.key ? '2px solid var(--green-700)' : '1px solid #ccc',
-                            background: pend.result===r.key ? 'var(--green-100)' : '#fff',
-                            fontWeight: pend.result===r.key ? 700 : 400,
-                          }}>
-                          {r.label}
-                        </button>
-                      ))}
+                        {AB_RESULTS.map((r)=>(
+                            <button key={r.key} type="button"
+                              onClick={()=>setPending(entry.player_name,'result',r.key)}
+                              style={{
+                                fontSize:'.72rem', padding:'5px 10px', borderRadius:8,
+                                border: pend.result===r.key ? `2px solid ${r.bg}` : '1px solid var(--ink-border,#444)',
+                                background: pend.result===r.key ? r.bg : 'var(--ink-card,#1a1a24)',
+                                color: pend.result===r.key ? (r.color ?? '#fff') : 'var(--ink-muted,#aaa)',
+                                fontWeight: pend.result===r.key ? 800 : 400,
+                              }}>
+                              {r.label}
+                            </button>
+                          ))}
                     </div>
-                    <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',marginBottom:8}}>
-                      <label style={{display:'flex',alignItems:'center',gap:4,margin:0,fontWeight:400,fontSize:'.78rem'}}>
-                        <input type="checkbox" checked={pend.risp||false}
-                          onChange={(e)=>setPending(entry.player_name,'risp',e.target.checked)}
-                          style={{width:'auto'}} />
-                        得点圏（RISP）
-                      </label>
-                      <label style={{display:'flex',alignItems:'center',gap:4,margin:0,fontWeight:400,fontSize:'.78rem'}}>
-                        打点:
-                        <input type="number" min={0} max={9} value={pend.rbi||0}
-                          onChange={(e)=>setPending(entry.player_name,'rbi',parseInt(e.target.value)||0)}
-                          style={{width:44,padding:'4px 6px',fontSize:'.82rem'}} />
-                      </label>
-                    </div>
+                        <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',marginBottom:8}}>
+                          <label style={{display:'flex',alignItems:'center',gap:4,margin:0,fontWeight:400,fontSize:'.78rem',color:'var(--ink-white,#eee)'}}>
+                            <input type="checkbox" checked={pend.risp||false}
+                              onChange={(e)=>setPending(entry.player_name,'risp',e.target.checked)}
+                              style={{width:'auto'}} />
+                            得点圏（RISP）
+                          </label>
+                          <label style={{display:'flex',alignItems:'center',gap:4,margin:0,fontWeight:400,fontSize:'.78rem',color:'var(--ink-white,#eee)'}}>
+                            打点:
+                            <input type="number" min={0} max={9} value={pend.rbi||0}
+                              onChange={(e)=>setPending(entry.player_name,'rbi',parseInt(e.target.value)||0)}
+                              style={{width:44,padding:'4px 6px',fontSize:'.82rem'}} />
+                          </label>
+                        </div>
                     <div style={{display:'flex',gap:6}}>
                       <button type="button" className="btn btn-sm btn-outline"
                         onClick={()=>commitAB(entry.player_name)}>
