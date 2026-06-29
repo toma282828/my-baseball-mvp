@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import PlayerAvatar from '@/components/PlayerAvatar';
 
 export default function AdminArea({ players, teamName }) {
   const router = useRouter();
@@ -15,6 +16,9 @@ export default function AdminArea({ players, teamName }) {
   const [deleteMsg, setDeleteMsg] = useState('');
   const [newTeamName, setNewTeamName] = useState(teamName);
   const [teamNameMsg, setTeamNameMsg] = useState('');
+  const [avatarTarget, setAvatarTarget] = useState(players[0]?.id ?? '');
+  const [avatarMsg, setAvatarMsg] = useState('');
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   function togglePanel(panel) {
     setOpenPanel((prev) => (prev === panel ? null : panel));
@@ -58,6 +62,39 @@ export default function AdminArea({ players, teamName }) {
     router.refresh();
   }
 
+  async function handleAvatarUpload(e) {
+    e.preventDefault();
+    const input = e.target.querySelector('input[type="file"]');
+    const file = input?.files?.[0];
+    if (!file || !avatarTarget) { setAvatarMsg('選手と画像を選んでください'); return; }
+
+    setAvatarUploading(true);
+    setAvatarMsg('');
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch(`/api/players/${avatarTarget}/avatar`, { method: 'POST', body: fd });
+    const d = await res.json();
+    setAvatarUploading(false);
+    if (d.error) { setAvatarMsg('エラー: ' + d.error); return; }
+    setAvatarMsg('アイコンを保存しました');
+    input.value = '';
+    router.refresh();
+  }
+
+  async function handleAvatarRemove() {
+    if (!avatarTarget) return;
+    if (!confirm('アイコンを削除しますか？')) return;
+    setAvatarUploading(true);
+    const res = await fetch(`/api/players/${avatarTarget}/avatar`, { method: 'DELETE' });
+    const d = await res.json();
+    setAvatarUploading(false);
+    if (d.error) { setAvatarMsg('エラー: ' + d.error); return; }
+    setAvatarMsg('アイコンを削除しました');
+    router.refresh();
+  }
+
+  const avatarPlayer = players.find((p) => p.id === avatarTarget);
+
   return (
     <div>
       <h2>記録員エリア</h2>
@@ -65,6 +102,48 @@ export default function AdminArea({ players, teamName }) {
       <div className="recorder-links">
         <Link href="/admin/games/new" className="btn">試合を入力する</Link>
         <Link href="/admin/players/new" className="btn btn-outline">新しい選手を登録する</Link>
+      </div>
+
+      {/* 選手アイコン設定 */}
+      <div className="settings-card" style={{ marginTop: 20 }}>
+        <h3 onClick={() => togglePanel('avatar')} style={{ cursor: 'pointer' }}>
+          選手アイコンを設定する {openPanel === 'avatar' ? '▲' : '▼'}
+        </h3>
+        {openPanel === 'avatar' && players.length > 0 && (
+          <form onSubmit={handleAvatarUpload}>
+            <label>選手を選ぶ</label>
+            <select value={avatarTarget} onChange={(e) => setAvatarTarget(e.target.value)}>
+              {players.map((p) => (
+                <option key={p.id} value={p.id}>
+                  #{p.jersey_double_zero ? '00' : p.jersey_num} {p.name}
+                </option>
+              ))}
+            </select>
+            {avatarPlayer && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '12px 0' }}>
+                <PlayerAvatar
+                  name={avatarPlayer.name}
+                  avatarUrl={avatarPlayer.avatar_url}
+                  jerseyNum={avatarPlayer.jersey_num}
+                  jerseyDoubleZero={avatarPlayer.jersey_double_zero}
+                  size={64}
+                />
+                <span className="hint" style={{ margin: 0 }}>ランキング・個人ページに表示されます</span>
+              </div>
+            )}
+            <label>写真を選ぶ（400KB以下）</label>
+            <input type="file" accept="image/*" />
+            {avatarMsg && <p className={`hint ${avatarMsg.startsWith('エラー') ? 'warn' : ''}`}>{avatarMsg}</p>}
+            <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+              <button type="submit" className="btn btn-sm" disabled={avatarUploading}>
+                {avatarUploading ? '保存中...' : 'アイコンを保存'}
+              </button>
+              <button type="button" className="btn btn-sm btn-outline" onClick={handleAvatarRemove} disabled={avatarUploading}>
+                アイコンを削除
+              </button>
+            </div>
+          </form>
+        )}
       </div>
 
       {/* 背番号変更 */}

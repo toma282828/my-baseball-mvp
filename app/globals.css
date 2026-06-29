@@ -286,6 +286,58 @@ select option { background: var(--ink-card); }
 }
 .rank-table tr:hover td { background: rgba(57,255,20,0.04); }
 .rank-table td.rank-1 { font-weight: 900; color: var(--ink-green); text-shadow: var(--glow-g); }
+.rank-table tr.rank-unqualified td { opacity: 0.75; }
+.rank-table tr.rank-unqualified td:first-child { color: var(--ink-muted); font-weight: 400; }
+.rank-divider-row td {
+  background: rgba(255,60,202,0.08) !important;
+  color: var(--ink-pink);
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-align: center;
+  padding: 6px 8px !important;
+}
+
+/* ── 選手アイコン ── */
+.player-avatar {
+  display: inline-block;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 2px solid var(--ink-green);
+  box-shadow: var(--glow-g);
+  vertical-align: middle;
+}
+.player-avatar-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(57,255,20,0.25), rgba(155,48,255,0.35));
+  color: var(--ink-white);
+  font-weight: 900;
+  line-height: 1;
+}
+.player-name-with-avatar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.player-name-inline {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+.player-profile-card {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px !important;
+}
+.player-list li .player-name-with-avatar { flex: 1; min-width: 0; }
+.player-list li .player-name-inline .num { font-weight: 900; color: var(--ink-green); margin-right: 6px; }
+.player-list li .player-name-inline .name { font-weight: 700; color: var(--ink-white); }
 .player-link { color: var(--ink-white); text-decoration: none; font-weight: 700; }
 
 /* ── Buttons ── */

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getAppData, getCurrentTeamSlug } from '@/lib/db';
 import { fmtJersey } from '@/lib/stats';
+import PlayerAvatar from '@/components/PlayerAvatar';
 
 export default async function PlayersPage() {
   const teamSlug = await getCurrentTeamSlug();
@@ -26,9 +27,19 @@ export default async function PlayersPage() {
           {sorted.map((p) => (
             <li key={p.id}>
               <Link href={`/players/${encodeURIComponent(p.name)}`}
-                style={{display:'flex',alignItems:'center',width:'100%',textDecoration:'none',color:'inherit'}}>
-                <span className="num">#{fmtJersey(p.jersey_num, p.jersey_double_zero)}</span>
-                <span className="name">{p.name}</span>
+                className="player-name-with-avatar"
+                style={{ width: '100%', textDecoration: 'none', color: 'inherit' }}>
+                <PlayerAvatar
+                  name={p.name}
+                  avatarUrl={p.avatar_url}
+                  jerseyNum={p.jersey_num}
+                  jerseyDoubleZero={p.jersey_double_zero}
+                  size={36}
+                />
+                <span className="player-name-inline">
+                  <span className="num">#{fmtJersey(p.jersey_num, p.jersey_double_zero)}</span>
+                  <span className="name">{p.name}</span>
+                </span>
                 <span className="pos">{p.position}</span>
               </Link>
             </li>

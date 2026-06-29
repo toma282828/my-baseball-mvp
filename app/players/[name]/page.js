@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getAppData, getCurrentTeamSlug } from '@/lib/db';
 import { aggregateBatting, aggregatePitching, fmtAvg, fmtEra, outsToIp, fmtJersey, buildAllAwards } from '@/lib/stats';
 import { formatDate, getTodayYear } from '@/lib/date';
+import PlayerAvatar from '@/components/PlayerAvatar';
 
 function StatCard({ label, value }) {
   return (
@@ -43,12 +44,18 @@ export default async function PlayerPage({ params }) {
       <Link href="/players" className="back-link">← 選手一覧に戻る</Link>
 
       {/* 選手カード */}
-      <div className="card" style={{textAlign:'center'}}>
-        <div style={{fontSize:'2rem',fontWeight:700}}>
-          #{fmtJersey(player.jersey_num, player.jersey_double_zero)}
+      <div className="card player-profile-card">
+        <PlayerAvatar
+          name={player.name}
+          avatarUrl={player.avatar_url}
+          jerseyNum={player.jersey_num}
+          jerseyDoubleZero={player.jersey_double_zero}
+          size={96}
+        />
+        <div style={{ fontSize: '1.1rem', fontWeight: 600, marginTop: 12 }}>{player.name}</div>
+        <div style={{ fontSize: '.85rem', opacity: .7, marginTop: 4 }}>
+          #{fmtJersey(player.jersey_num, player.jersey_double_zero)} · {player.position}
         </div>
-        <div style={{fontSize:'1.1rem',fontWeight:600}}>{player.name}</div>
-        <div style={{fontSize:'.8rem',opacity:.6,marginTop:4}}>{player.position}</div>
         {myAwards.length > 0 && (
           <div className="player-titles">
             {myAwards.map((a, i) => (
