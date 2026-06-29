@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import Link from 'next/link';
+import { markVisitActive } from '@/components/SessionGuard';
 
 export default function LoginPage() {
   const [teamId, setTeamId]         = useState('');
@@ -51,6 +52,7 @@ export default function LoginPage() {
         setLoading(false);
         return;
       }
+      markVisitActive();
       window.location.href = '/';
     } catch {
       setError('通信エラーが発生しました');

@@ -3,7 +3,25 @@
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 
-/** リロード時にログイン画面へ戻す */
+const VISIT_KEY = 'app_visit';
+
+function clearSessionAndGoLogin() {
+  sessionStorage.removeItem(VISIT_KEY);
+  return fetch('/api/auth/session', { method: 'DELETE' })
+    .then(() => { window.location.replace('/auth/login'); });
+}
+
+/** ログイン成功後に呼ぶ（このタブでの閲覧を許可） */
+export function markVisitActive() {
+  sessionStorage.setItem(VISIT_KEY, '1');
+}
+
+/** ログアウト時に呼ぶ */
+export function clearVisitActive() {
+  sessionStorage.removeItem(VISIT_KEY);
+}
+
+/** リロード・URL直接アクセス時はログイン画面へ */
 export default function SessionGuard({ children }) {
   const pathname = usePathname();
   const isAuthPage = pathname.startsWith('/auth');
@@ -16,9 +34,12 @@ export default function SessionGuard({ children }) {
     }
 
     const nav = performance.getEntriesByType('navigation')[0];
-    if (nav?.type === 'reload') {
-      fetch('/api/auth/session', { method: 'DELETE' })
-        .then(() => { window.location.replace('/auth/login'); });
+    const navType = nav?.type;
+    const visitActive = sessionStorage.getItem(VISIT_KEY);
+
+    // リロード、またはURLを直接開いた（新タブ・ブックマーク等）→ ログインへ
+    if (navType === 'reload' || (navType === 'navigate' && !visitActive)) {
+      clearSessionAndGoLogin();
       return;
     }
 

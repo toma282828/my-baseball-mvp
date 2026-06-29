@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { clearVisitActive } from '@/components/SessionGuard';
 
 const NAV = [
   { href: '/',        label: 'ランキング' },
@@ -15,6 +16,7 @@ export default function AppShell({ children, teamName }) {
   const isAuthPage = pathname.startsWith('/auth');
 
   async function handleLogout() {
+    clearVisitActive();
     await fetch('/api/auth/logout', { method: 'POST' });
     window.location.href = '/auth/login';
   }
