@@ -33,7 +33,7 @@ export async function POST(request) {
     .maybeSingle();
 
   if (existing) {
-    return NextResponse.json({ error: 'このチームIDはすでに使われています' }, { status: 409 });
+    return NextResponse.json({ error: 'そのチームIDは使われています' }, { status: 409 });
   }
 
   const { error } = await supabase.from('teams').insert({
@@ -44,6 +44,9 @@ export async function POST(request) {
   });
 
   if (error) {
+    if (error.code === '23505') {
+      return NextResponse.json({ error: 'そのチームIDは使われています' }, { status: 409 });
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
