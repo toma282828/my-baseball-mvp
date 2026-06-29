@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import PlayerAvatar from '@/components/PlayerAvatar';
+import { resizeImageForAvatar } from '@/lib/resizeImage';
 
 export default function AdminArea({ players, teamName }) {
   const router = useRouter();
@@ -70,15 +71,21 @@ export default function AdminArea({ players, teamName }) {
 
     setAvatarUploading(true);
     setAvatarMsg('');
-    const fd = new FormData();
-    fd.append('file', file);
-    const res = await fetch(`/api/players/${avatarTarget}/avatar`, { method: 'POST', body: fd });
-    const d = await res.json();
-    setAvatarUploading(false);
-    if (d.error) { setAvatarMsg('エラー: ' + d.error); return; }
-    setAvatarMsg('アイコンを保存しました');
-    input.value = '';
-    router.refresh();
+    try {
+      const resized = await resizeImageForAvatar(file);
+      const fd = new FormData();
+      fd.append('file', resized);
+      const res = await fetch(`/api/players/${avatarTarget}/avatar`, { method: 'POST', body: fd });
+      const d = await res.json();
+      if (d.error) { setAvatarMsg('エラー: ' + d.error); return; }
+      setAvatarMsg('アイコンを保存しました');
+      input.value = '';
+      router.refresh();
+    } catch (err) {
+      setAvatarMsg('エラー: ' + (err.message ?? '画像の処理に失敗しました'));
+    } finally {
+      setAvatarUploading(false);
+    }
   }
 
   async function handleAvatarRemove() {
@@ -131,7 +138,7 @@ export default function AdminArea({ players, teamName }) {
                 <span className="hint" style={{ margin: 0 }}>ランキング・個人ページに表示されます</span>
               </div>
             )}
-            <label>写真を選ぶ（400KB以下）</label>
+            <label>写真を選ぶ（スマホの写真もOK・自動で縮小）</label>
             <input type="file" accept="image/*" />
             {avatarMsg && <p className={`hint ${avatarMsg.startsWith('エラー') ? 'warn' : ''}`}>{avatarMsg}</p>}
             <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>

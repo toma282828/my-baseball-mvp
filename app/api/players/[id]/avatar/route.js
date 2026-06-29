@@ -3,7 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { requireTeamSlug } from '@/lib/team';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
-const MAX_BYTES = 400 * 1024;
+const MAX_BYTES = 3 * 1024 * 1024; // 3MB
 
 /** POST: 選手アイコン画像をアップロード */
 export async function POST(request, { params }) {
@@ -24,7 +24,7 @@ export async function POST(request, { params }) {
 
   const bytes = await file.arrayBuffer();
   if (bytes.byteLength > MAX_BYTES) {
-    return NextResponse.json({ error: '画像は400KB以下にしてください' }, { status: 400 });
+    return NextResponse.json({ error: '画像が大きすぎます。別の写真をお試しください' }, { status: 400 });
   }
 
   const base64 = Buffer.from(bytes).toString('base64');
