@@ -1,13 +1,14 @@
 import { notFound } from 'next/navigation';
 import GameDetail from '@/components/GameDetail';
-import { getAppData, getGameById, getStatsByGameId } from '@/lib/db';
+import { getAppData, getGameById, getStatsByGameId, getCurrentTeamSlug } from '@/lib/db';
 
 export default async function GameDetailPage({ params }) {
   const { id } = await params;
+  const teamSlug = await getCurrentTeamSlug();
   const [game, stats, appData] = await Promise.all([
-    getGameById(id),
+    getGameById(id, teamSlug),
     getStatsByGameId(id),
-    getAppData(),
+    getAppData(teamSlug),
   ]);
   if (!game) notFound();
 

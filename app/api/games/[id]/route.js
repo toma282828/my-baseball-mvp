@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
+import { requireTeamSlug } from '@/lib/team';
 
 function getSupabase() {
   return createClient(
@@ -9,13 +10,29 @@ function getSupabase() {
   );
 }
 
+async function assertGameOwned(supabase, id, teamSlug) {
+  const { data } = await supabase
+    .from('games')
+    .select('id')
+    .eq('id', id)
+    .eq('team_slug', teamSlug)
+    .maybeSingle();
+  return !!data;
+}
+
 /** PUT: 試合更新 */
 export async function PUT(request, { params }) {
+  const teamSlug = await requireTeamSlug();
+  if (!teamSlug) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   const { id } = await params;
   const body = await request.json();
   const { game, stats } = body;
 
   const supabase = getSupabase();
+  if (!(await assertGameOwned(supabase, id, teamSlug))) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
 
   const { error: gameErr } = await supabase
     .from('games')
@@ -27,7 +44,8 @@ export async function PUT(request, { params }) {
       their_score: game.their_score,
       result: game.result,
     })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('team_slug', teamSlug);
 
   if (gameErr) return NextResponse.json({ error: gameErr.message }, { status: 500 });
 
@@ -45,13 +63,19 @@ export async function PUT(request, { params }) {
 
 /** DELETE: 試合削除 */
 export async function DELETE(request, { params }) {
+  const teamSlug = await requireTeamSlug();
+  if (!teamSlug) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   const { id } = await params;
   const supabase = getSupabase();
 
-  // game_stats を先に削除（外部キー制約なしの場合も孤立レコードを防ぐ）
+  if (!(await assertGameOwned(supabase, id, teamSlug))) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
   await supabase.from('game_stats').delete().eq('game_id', id);
 
-  const { error } = await supabase.from('games').delete().eq('id', id);
+  const { error } = await supabase.from('games').delete().eq('id', id).eq('team_slug', teamSlug);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   revalidatePath('/', 'layout');

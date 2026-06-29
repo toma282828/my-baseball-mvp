@@ -1,9 +1,10 @@
 import Link from 'next/link';
-import { getAppData } from '@/lib/db';
+import { getAppData, getCurrentTeamSlug } from '@/lib/db';
 import { fmtJersey } from '@/lib/stats';
 
 export default async function PlayersPage() {
-  const { players } = await getAppData();
+  const teamSlug = await getCurrentTeamSlug();
+  const { players } = await getAppData(teamSlug);
   const sorted = [...players].sort((a, b) => {
     if (a.jersey_double_zero && !b.jersey_double_zero) return -1;
     if (!a.jersey_double_zero && b.jersey_double_zero) return 1;

@@ -3,26 +3,26 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email,    setEmail]    = useState('');
+  const [teamId, setTeamId]     = useState('');
   const [password, setPassword] = useState('');
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState('');
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState('');
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!email.trim() || !password) { setError('メールアドレスとパスワードを入力してください'); return; }
-    setLoading(true); setError('');
-    const supabase = createClient();
-    const { error: err } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
+    setLoading(true);
+    setError('');
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ teamId, password }),
     });
+    const data = await res.json();
     setLoading(false);
-    if (err) { setError('メールアドレスまたはパスワードが違います'); return; }
+    if (!res.ok) { setError(data.error ?? 'ログインに失敗しました'); return; }
     router.push('/');
     router.refresh();
   }
@@ -31,15 +31,16 @@ export default function LoginPage() {
     <div className="auth-page">
       <div className="auth-card">
         <h1 className="auth-title">⚾ ログイン</h1>
+        <p className="auth-hint">チームIDとパスワードを入力してください。</p>
         <form onSubmit={handleSubmit}>
-          <label className="auth-label">メールアドレス</label>
+          <label className="auth-label">チームID</label>
           <input
-            type="email"
+            type="text"
             className="auth-input"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="例: baseball@example.com"
-            autoComplete="email"
+            value={teamId}
+            onChange={(e) => setTeamId(e.target.value)}
+            placeholder="例: tigers2026"
+            autoComplete="username"
           />
           <label className="auth-label">パスワード</label>
           <input
@@ -56,7 +57,7 @@ export default function LoginPage() {
           </button>
         </form>
         <p className="auth-switch">
-          アカウントをお持ちでない方は <Link href="/auth/signup">新規登録</Link>
+          初めての方は <Link href="/auth/signup">新規登録</Link>
         </p>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
+import { requireTeamSlug } from '@/lib/team';
 
 function getSupabase() {
   return createClient(
@@ -11,6 +12,9 @@ function getSupabase() {
 
 /** POST: 試合登録 */
 export async function POST(request) {
+  const teamSlug = await requireTeamSlug();
+  if (!teamSlug) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   const body = await request.json();
   const { game, stats } = body;
 
@@ -25,6 +29,7 @@ export async function POST(request) {
       our_score: game.our_score,
       their_score: game.their_score,
       result: game.result,
+      team_slug: teamSlug,
     })
     .select()
     .single();

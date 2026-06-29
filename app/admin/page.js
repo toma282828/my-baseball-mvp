@@ -1,7 +1,8 @@
 import AdminArea from '@/components/admin/AdminArea';
-import { getAppData } from '@/lib/db';
+import { getAppData, getCurrentTeamSlug } from '@/lib/db';
 
 export default async function AdminPage() {
-  const { players, teamName } = await getAppData();
+  const teamSlug = await getCurrentTeamSlug();
+  const { players, teamName } = await getAppData(teamSlug);
   return <AdminArea players={players} teamName={teamName} />;
 }

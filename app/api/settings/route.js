@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
+import { requireTeamSlug } from '@/lib/team';
 
 function getSupabase() {
   return createClient(
@@ -9,16 +10,21 @@ function getSupabase() {
   );
 }
 
-/** PUT: 設定を更新（チーム名など） */
+/** PUT: チーム名を更新 */
 export async function PUT(request) {
+  const teamSlug = await requireTeamSlug();
+  if (!teamSlug) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   const body = await request.json();
   const supabase = getSupabase();
 
-  const { error } = await supabase
-    .from('settings')
-    .upsert({ key: body.key, value: body.value }, { onConflict: 'key' });
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (body.key === 'team_name') {
+    const { error } = await supabase
+      .from('teams')
+      .update({ display_name: body.value })
+      .eq('slug', teamSlug);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 
   revalidatePath('/', 'layout');
   return NextResponse.json({ ok: true });

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
+import { requireTeamSlug } from '@/lib/team';
 
 function getSupabase() {
   return createClient(
@@ -11,15 +12,19 @@ function getSupabase() {
 
 /** POST: 選手登録 */
 export async function POST(request) {
+  const teamSlug = await requireTeamSlug();
+  if (!teamSlug) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   const body = await request.json();
   const supabase = getSupabase();
 
-  const { data, error } = await supabase.from('players').insert({
+  const { error } = await supabase.from('players').insert({
     name: body.name,
     jersey_num: body.jersey_num,
     jersey_double_zero: body.jersey_double_zero ?? false,
     position: body.position ?? '',
-  }).select();
+    team_slug: teamSlug,
+  });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
 
 const NAV = [
   { href: '/',        label: 'ランキング' },
@@ -14,12 +13,16 @@ const NAV = [
 export default function AppShell({ children, teamName }) {
   const pathname = usePathname();
   const router   = useRouter();
+  const isAuthPage = pathname.startsWith('/auth');
 
   async function handleLogout() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    await fetch('/api/auth/logout', { method: 'POST' });
     router.push('/auth/login');
     router.refresh();
+  }
+
+  if (isAuthPage) {
+    return <>{children}</>;
   }
 
   return (

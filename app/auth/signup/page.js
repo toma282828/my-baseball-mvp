@@ -2,61 +2,75 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
 
 export default function SignupPage() {
-  const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
-  const [error, setError] = useState('');
+  const router = useRouter();
+  const [email, setEmail]       = useState('');
+  const [teamId, setTeamId]     = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState('');
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!email.trim()) { setError('メールアドレスを入力してください'); return; }
-    setLoading(true); setError('');
-    const supabase = createClient();
-    const { error: err } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: {
-        emailRedirectTo: `${location.origin}/auth/callback?next=/auth/setup`,
-        shouldCreateUser: true,
-      },
+    setLoading(true);
+    setError('');
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, teamId, password }),
     });
+    const data = await res.json();
     setLoading(false);
-    if (err) { setError(err.message); return; }
-    setSent(true);
+    if (!res.ok) { setError(data.error ?? '登録に失敗しました'); return; }
+    router.push('/');
+    router.refresh();
   }
 
   return (
     <div className="auth-page">
       <div className="auth-card">
         <h1 className="auth-title">⚾ 新規登録</h1>
-        {sent ? (
-          <div>
-            <p className="auth-hint">
-              <strong>{email}</strong> に登録用URLを送信しました。<br />
-              メールを確認してリンクをタップしてください。
-            </p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit}>
-            <label className="auth-label">メールアドレス</label>
-            <input
-              type="email"
-              className="auth-input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="例: baseball@example.com"
-              autoComplete="email"
-            />
-            {error && <p className="auth-error">{error}</p>}
-            <button type="submit" className="auth-btn" disabled={loading}>
-              {loading ? '送信中...' : '登録用URLを送る'}
-            </button>
-          </form>
-        )}
+        <p className="auth-hint">チームの記録員が最初に1回だけ登録します。</p>
+        <form onSubmit={handleSubmit}>
+          <label className="auth-label">メールアドレス</label>
+          <input
+            type="email"
+            className="auth-input"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="例: baseball@example.com"
+            autoComplete="email"
+          />
+          <label className="auth-label">チームID</label>
+          <input
+            type="text"
+            className="auth-input"
+            value={teamId}
+            onChange={(e) => setTeamId(e.target.value)}
+            placeholder="例: tigers2026"
+            autoComplete="username"
+          />
+          <p className="auth-hint" style={{ marginTop: 4 }}>
+            ログイン時に使うIDです。メンバー全員で共有します。
+          </p>
+          <label className="auth-label">パスワード（6文字以上）</label>
+          <input
+            type="password"
+            className="auth-input"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="パスワードを設定"
+            autoComplete="new-password"
+          />
+          {error && <p className="auth-error">{error}</p>}
+          <button type="submit" className="auth-btn" disabled={loading}>
+            {loading ? '登録中...' : '登録してアプリを開く'}
+          </button>
+        </form>
         <p className="auth-switch">
-          すでにアカウントをお持ちの方は <Link href="/auth/login">ログイン</Link>
+          すでに登録済みの方は <Link href="/auth/login">ログイン</Link>
         </p>
       </div>
     </div>

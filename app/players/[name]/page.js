@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { getAppData } from '@/lib/db';
+import { getAppData, getCurrentTeamSlug } from '@/lib/db';
 import { aggregateBatting, aggregatePitching, fmtAvg, fmtEra, outsToIp, fmtJersey, buildAllAwards } from '@/lib/stats';
 import { formatDate, getTodayYear } from '@/lib/date';
 
@@ -17,7 +17,8 @@ export default async function PlayerPage({ params }) {
   const { name: encodedName } = await params;
   const name = decodeURIComponent(encodedName);
 
-  const { players, games, stats } = await getAppData();
+  const teamSlug = await getCurrentTeamSlug();
+  const { players, games, stats } = await getAppData(teamSlug);
   const player = players.find((p) => p.name === name);
   if (!player) notFound();
 

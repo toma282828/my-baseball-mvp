@@ -1,7 +1,8 @@
 import GameForm from '@/components/admin/GameForm';
-import { getPlayers } from '@/lib/db';
+import { getPlayers, getCurrentTeamSlug } from '@/lib/db';
 
 export default async function NewGamePage() {
-  const players = await getPlayers();
+  const teamSlug = await getCurrentTeamSlug();
+  const players = await getPlayers(teamSlug);
   return <GameForm players={players} />;
 }
