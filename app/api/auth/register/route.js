@@ -1,14 +1,7 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { hashPassword } from '@/lib/password';
 import { createSessionToken, sessionCookieOptions } from '@/lib/session';
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  );
-}
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 function normalizeSlug(raw) {
   return raw.trim().toLowerCase().replace(/\s+/g, '-');
@@ -23,7 +16,12 @@ export async function POST(request) {
   if (!teamId) return NextResponse.json({ error: 'チームIDを入力してください' }, { status: 400 });
   if (password.length < 6) return NextResponse.json({ error: 'パスワードは6文字以上にしてください' }, { status: 400 });
 
-  const supabase = getSupabase();
+  let supabase;
+  try {
+    supabase = getSupabaseAdmin();
+  } catch {
+    return NextResponse.json({ error: 'サーバー設定が未完了です（SERVICE_ROLE_KEY）' }, { status: 500 });
+  }
 
   const { data: existing } = await supabase
     .from('teams')

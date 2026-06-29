@@ -1,14 +1,7 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
 import { requireTeamSlug } from '@/lib/team';
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  );
-}
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 /** PUT: チーム名を更新 */
 export async function PUT(request) {
@@ -16,9 +9,14 @@ export async function PUT(request) {
   if (!teamSlug) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await request.json();
-  const supabase = getSupabase();
 
   if (body.key === 'team_name') {
+    let supabase;
+    try {
+      supabase = getSupabaseAdmin();
+    } catch {
+      return NextResponse.json({ error: 'サーバー設定が未完了です（SERVICE_ROLE_KEY）' }, { status: 500 });
+    }
     const { error } = await supabase
       .from('teams')
       .update({ display_name: body.value })
