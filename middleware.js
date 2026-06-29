@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { verifySessionToken } from '@/lib/session';
+import { verifySessionToken, verifyMonthlyAuthToken } from '@/lib/session';
+import { getTokyoYearMonth } from '@/lib/date';
 
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
@@ -7,13 +8,20 @@ export async function middleware(request) {
 
   const token = request.cookies.get('team_session')?.value;
   const teamSlug = await verifySessionToken(token);
+  const yearMonth = getTokyoYearMonth();
+  const monthlyToken = request.cookies.get('monthly_auth')?.value;
+  const monthly = await verifyMonthlyAuthToken(monthlyToken);
 
-  if (!teamSlug && !isAuthPath) {
+  const authed = !!(
+    teamSlug &&
+    monthly &&
+    monthly.teamSlug === teamSlug &&
+    monthly.yearMonth === yearMonth
+  );
+
+  // 未ログイン → ログイン画面へ（/auth は常に開ける）
+  if (!authed && !isAuthPath) {
     return NextResponse.redirect(new URL('/auth/login', request.url));
-  }
-
-  if (teamSlug && (pathname === '/auth/login' || pathname === '/auth/signup')) {
-    return NextResponse.redirect(new URL('/', request.url));
   }
 
   return NextResponse.next();

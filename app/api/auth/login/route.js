@@ -1,23 +1,32 @@
 import { NextResponse } from 'next/server';
 import { verifyPassword } from '@/lib/password';
-import { createSessionToken, sessionCookieOptions } from '@/lib/session';
+import {
+  createSessionToken,
+  createMonthlyAuthToken,
+  sessionCookieOptions,
+  monthlyAuthCookieOptions,
+  isMonthlyAuthValid,
+  normalizeTeamSlug,
+} from '@/lib/session';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { getTokyoYearMonth } from '@/lib/date';
+import { cookies } from 'next/headers';
 
-/** POST: ログイン（チームID + パスワード） */
+/** POST: ログイン（通常はチームIDのみ / 月初はパスワードも必要） */
 export async function POST(request) {
   const body = await request.json();
-  const teamId = (body.teamId ?? '').trim().toLowerCase().replace(/\s+/g, '-');
+  const teamId = normalizeTeamSlug(body.teamId ?? '');
   const password = body.password ?? '';
 
-  if (!teamId || !password) {
-    return NextResponse.json({ error: 'チームIDとパスワードを入力してください' }, { status: 400 });
+  if (!teamId) {
+    return NextResponse.json({ error: 'チームIDを入力してください' }, { status: 400 });
   }
 
   let supabase;
   try {
     supabase = getSupabaseAdmin();
   } catch {
-    return NextResponse.json({ error: 'サーバー設定が未完了です（SERVICE_ROLE_KEY）' }, { status: 500 });
+    return NextResponse.json({ error: 'サーバー設定が未完了です' }, { status: 500 });
   }
 
   const { data: team } = await supabase
@@ -26,13 +35,36 @@ export async function POST(request) {
     .eq('slug', teamId)
     .maybeSingle();
 
-  if (!team || !verifyPassword(password, team.password_hash)) {
-    return NextResponse.json({ error: 'チームIDまたはパスワードが違います' }, { status: 401 });
+  if (!team) {
+    return NextResponse.json({ error: 'チームIDが見つかりません' }, { status: 404 });
   }
 
-  const token = await createSessionToken(team.slug);
-  const opts = sessionCookieOptions();
-  const res = NextResponse.json({ ok: true });
-  res.cookies.set(opts.name, token, opts);
+  const yearMonth = getTokyoYearMonth();
+  const cookieStore = await cookies();
+  const monthlyOk = await isMonthlyAuthValid(cookieStore, teamId, yearMonth);
+
+  if (!monthlyOk) {
+    if (!password) {
+      return NextResponse.json(
+        { needPassword: true, error: '今月最初のログインのため、パスワードが必要です' },
+        { status: 401 }
+      );
+    }
+    if (!verifyPassword(password, team.password_hash)) {
+      return NextResponse.json(
+        { needPassword: true, error: 'パスワードが違います' },
+        { status: 401 }
+      );
+    }
+  }
+
+  const sessionToken = await createSessionToken(team.slug);
+  const monthlyToken = await createMonthlyAuthToken(team.slug, yearMonth);
+  const sessionOpts = sessionCookieOptions();
+  const monthlyOpts = monthlyAuthCookieOptions();
+
+  const res = NextResponse.json({ ok: true, needPassword: false });
+  res.cookies.set(sessionOpts.name, sessionToken, sessionOpts);
+  res.cookies.set(monthlyOpts.name, monthlyToken, monthlyOpts);
   return res;
 }

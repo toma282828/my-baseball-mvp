@@ -1,16 +1,19 @@
 import { NextResponse } from 'next/server';
 import { hashPassword } from '@/lib/password';
-import { createSessionToken, sessionCookieOptions } from '@/lib/session';
+import {
+  createSessionToken,
+  createMonthlyAuthToken,
+  sessionCookieOptions,
+  monthlyAuthCookieOptions,
+  normalizeTeamSlug,
+} from '@/lib/session';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
-
-function normalizeSlug(raw) {
-  return raw.trim().toLowerCase().replace(/\s+/g, '-');
-}
+import { getTokyoYearMonth } from '@/lib/date';
 
 /** POST: 新規登録（チームID + パスワード） */
 export async function POST(request) {
   const body = await request.json();
-  const teamId = normalizeSlug(body.teamId ?? '');
+  const teamId = normalizeTeamSlug(body.teamId ?? '');
   const password = body.password ?? '';
 
   if (!teamId) return NextResponse.json({ error: 'チームIDを入力してください' }, { status: 400 });
@@ -20,7 +23,7 @@ export async function POST(request) {
   try {
     supabase = getSupabaseAdmin();
   } catch {
-    return NextResponse.json({ error: 'サーバー設定が未完了です（SERVICE_ROLE_KEY）' }, { status: 500 });
+    return NextResponse.json({ error: 'サーバー設定が未完了です' }, { status: 500 });
   }
 
   const { data: existing } = await supabase
@@ -44,9 +47,14 @@ export async function POST(request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const token = await createSessionToken(teamId);
-  const opts = sessionCookieOptions();
+  const yearMonth = getTokyoYearMonth();
+  const sessionToken = await createSessionToken(teamId);
+  const monthlyToken = await createMonthlyAuthToken(teamId, yearMonth);
+  const sessionOpts = sessionCookieOptions();
+  const monthlyOpts = monthlyAuthCookieOptions();
+
   const res = NextResponse.json({ ok: true });
-  res.cookies.set(opts.name, token, opts);
+  res.cookies.set(sessionOpts.name, sessionToken, sessionOpts);
+  res.cookies.set(monthlyOpts.name, monthlyToken, monthlyOpts);
   return res;
 }

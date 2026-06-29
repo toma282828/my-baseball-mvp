@@ -31,7 +31,7 @@ export default function SignupPage() {
     <div className="auth-page">
       <div className="auth-card">
         <h1 className="auth-title">⚾ 新規登録</h1>
-        <p className="auth-hint">チームの記録員が最初に1回だけ登録します。</p>
+        <p className="auth-hint">新しいチームを作るときに1回だけ登録します。</p>
         <form onSubmit={handleSubmit}>
           <label className="auth-label">チームID</label>
           <input
