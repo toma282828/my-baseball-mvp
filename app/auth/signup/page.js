@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 
 export default function SignupPage() {
   const router = useRouter();
-  const [email, setEmail]       = useState('');
   const [teamId, setTeamId]     = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading]   = useState(false);
@@ -19,7 +18,7 @@ export default function SignupPage() {
     const res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, teamId, password }),
+      body: JSON.stringify({ teamId, password }),
     });
     const data = await res.json();
     setLoading(false);
@@ -34,15 +33,6 @@ export default function SignupPage() {
         <h1 className="auth-title">⚾ 新規登録</h1>
         <p className="auth-hint">チームの記録員が最初に1回だけ登録します。</p>
         <form onSubmit={handleSubmit}>
-          <label className="auth-label">メールアドレス</label>
-          <input
-            type="email"
-            className="auth-input"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="例: baseball@example.com"
-            autoComplete="email"
-          />
           <label className="auth-label">チームID</label>
           <input
             type="text"

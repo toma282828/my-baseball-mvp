@@ -14,14 +14,12 @@ function normalizeSlug(raw) {
   return raw.trim().toLowerCase().replace(/\s+/g, '-');
 }
 
-/** POST: 新規登録（メール + チームID + パスワード） */
+/** POST: 新規登録（チームID + パスワード） */
 export async function POST(request) {
   const body = await request.json();
-  const email = (body.email ?? '').trim().toLowerCase();
   const teamId = normalizeSlug(body.teamId ?? '');
   const password = body.password ?? '';
 
-  if (!email) return NextResponse.json({ error: 'メールアドレスを入力してください' }, { status: 400 });
   if (!teamId) return NextResponse.json({ error: 'チームIDを入力してください' }, { status: 400 });
   if (password.length < 6) return NextResponse.json({ error: 'パスワードは6文字以上にしてください' }, { status: 400 });
 
@@ -39,7 +37,7 @@ export async function POST(request) {
 
   const { error } = await supabase.from('teams').insert({
     slug: teamId,
-    email,
+    email: `${teamId}@team.local`,
     password_hash: hashPassword(password),
     display_name: teamId,
   });
