@@ -6,9 +6,6 @@ import { useRouter } from 'next/navigation';
 
 export default function AdminArea({ players, teamName }) {
   const router = useRouter();
-  const [authed, setAuthed] = useState(false);
-  const [pw, setPw] = useState('');
-  const [authError, setAuthError] = useState('');
   const [openPanel, setOpenPanel] = useState(null);
   const [editTarget, setEditTarget] = useState(players[0]?.id ?? '');
   const [editNum, setEditNum] = useState('');
@@ -21,14 +18,6 @@ export default function AdminArea({ players, teamName }) {
 
   function togglePanel(panel) {
     setOpenPanel((prev) => (prev === panel ? null : panel));
-  }
-
-  async function handleLogin(e) {
-    e.preventDefault();
-    const res = await fetch('/api/auth', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ password: pw }) });
-    const d = await res.json();
-    if (d.ok) { setAuthed(true); setAuthError(''); }
-    else setAuthError('パスワードが違います');
   }
 
   async function handleEditNum(e) {
@@ -67,23 +56,6 @@ export default function AdminArea({ players, teamName }) {
     if (d.error) { setTeamNameMsg('エラー: ' + d.error); return; }
     setTeamNameMsg('保存しました');
     router.refresh();
-  }
-
-  if (!authed) {
-    return (
-      <div>
-        <h2>記録員エリア</h2>
-        <div className="card">
-          <p className="sub">記録員専用エリアです。パスワードを入力してください。</p>
-          <form onSubmit={handleLogin}>
-            <label>パスワード</label>
-            <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="パスワード" />
-            {authError && <p className="hint warn">{authError}</p>}
-            <button type="submit" className="btn" style={{marginTop:12}}>入る</button>
-          </form>
-        </div>
-      </div>
-    );
   }
 
   return (

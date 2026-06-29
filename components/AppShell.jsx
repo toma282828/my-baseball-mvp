@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 
 const NAV = [
   { href: '/',        label: 'ランキング' },
@@ -12,6 +13,14 @@ const NAV = [
 
 export default function AppShell({ children, teamName }) {
   const pathname = usePathname();
+  const router   = useRouter();
+
+  async function handleLogout() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/auth/login');
+    router.refresh();
+  }
 
   return (
     <div className="app">
@@ -40,6 +49,13 @@ export default function AppShell({ children, teamName }) {
       <div className="screen-area">
         <div className="page">
           {children}
+          <div style={{textAlign:'center',marginTop:32,paddingBottom:16}}>
+            <button onClick={handleLogout}
+              style={{background:'none',border:'none',cursor:'pointer',
+                color:'var(--ink-muted,#888)',fontSize:'.75rem',textDecoration:'underline'}}>
+              ログアウト
+            </button>
+          </div>
         </div>
       </div>
     </div>

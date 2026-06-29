@@ -536,3 +536,83 @@ select option { background: var(--ink-card); }
 }
 .toast.show { display: block; }
 .toast.error { border-color: var(--ink-pink); color: var(--ink-pink); background: rgba(255,60,202,0.1); box-shadow: var(--glow-p); }
+
+/* ── 認証ページ ── */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ink-bg);
+  padding: 24px;
+}
+.auth-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--ink-card);
+  border: 1.5px solid var(--ink-border);
+  border-radius: var(--radius);
+  padding: 32px 24px;
+}
+.auth-title {
+  font-size: 1.3rem;
+  font-weight: 900;
+  color: var(--ink-green);
+  text-shadow: var(--glow-g);
+  margin: 0 0 20px;
+  text-align: center;
+  letter-spacing: .06em;
+  border: none;
+}
+.auth-label {
+  display: block;
+  font-size: .78rem;
+  font-weight: 700;
+  color: var(--ink-muted);
+  margin: 12px 0 4px;
+  letter-spacing: .04em;
+}
+.auth-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--ink-bg);
+  border: 1.5px solid var(--ink-border);
+  border-radius: 8px;
+  color: var(--ink-white);
+  font-size: .9rem;
+  box-sizing: border-box;
+}
+.auth-input:focus { border-color: var(--ink-green); outline: none; }
+.auth-btn {
+  width: 100%;
+  margin-top: 20px;
+  padding: 12px;
+  background: var(--ink-green);
+  color: #0e0e14;
+  border: none;
+  border-radius: 8px;
+  font-size: .92rem;
+  font-weight: 900;
+  cursor: pointer;
+  letter-spacing: .04em;
+}
+.auth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.auth-error {
+  color: var(--ink-pink);
+  font-size: .78rem;
+  margin: 8px 0 0;
+  font-weight: 700;
+}
+.auth-hint {
+  color: var(--ink-muted);
+  font-size: .82rem;
+  line-height: 1.7;
+  margin: 0 0 16px;
+}
+.auth-switch {
+  text-align: center;
+  font-size: .78rem;
+  color: var(--ink-muted);
+  margin-top: 20px;
+}
+.auth-switch a { color: var(--ink-green); text-decoration: none; font-weight: 700; }
