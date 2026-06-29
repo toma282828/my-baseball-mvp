@@ -1,11 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
-  const router = useRouter();
   const [teamId, setTeamId]         = useState('');
   const [password, setPassword]     = useState('');
   const [needPassword, setNeedPassword] = useState(false);
@@ -30,34 +28,34 @@ export default function LoginPage() {
     setNeedPassword(!!data.needPassword);
   }, []);
 
-  useEffect(() => {
-    const t = setTimeout(() => checkStatus(teamId), 300);
-    return () => clearTimeout(t);
-  }, [teamId, checkStatus]);
-
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
     setError('');
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ teamId, password: needPassword ? password : undefined }),
-    });
-    const data = await res.json();
-    setLoading(false);
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamId, password: needPassword ? password : undefined }),
+      });
+      const data = await res.json();
 
-    if (data.needPassword) {
-      setNeedPassword(true);
-      setError(data.error ?? 'パスワードが必要です');
-      return;
+      if (data.needPassword) {
+        setNeedPassword(true);
+        setError(data.error ?? 'パスワードが必要です');
+        setLoading(false);
+        return;
+      }
+      if (!res.ok) {
+        setError(data.error ?? 'ログインに失敗しました');
+        setLoading(false);
+        return;
+      }
+      window.location.href = '/';
+    } catch {
+      setError('通信エラーが発生しました');
+      setLoading(false);
     }
-    if (!res.ok) {
-      setError(data.error ?? 'ログインに失敗しました');
-      return;
-    }
-    router.push('/');
-    router.refresh();
   }
 
   return (
@@ -75,6 +73,7 @@ export default function LoginPage() {
             className="auth-input"
             value={teamId}
             onChange={(e) => setTeamId(e.target.value)}
+            onBlur={() => checkStatus(teamId)}
             placeholder="例: tigers2026"
             autoComplete="username"
           />

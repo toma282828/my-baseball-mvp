@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import AppShell from '@/components/AppShell';
+import SessionGuard from '@/components/SessionGuard';
 import { getAppData } from '@/lib/db';
 import { getTeamSlugFromCookies } from '@/lib/session';
 import './globals.css';
@@ -19,9 +20,11 @@ export default async function RootLayout({ children }) {
   return (
     <html lang="ja">
       <body>
-        <AppShell teamName={data.teamName}>
-          {children}
-        </AppShell>
+        <SessionGuard>
+          <AppShell teamName={data.teamName}>
+            {children}
+          </AppShell>
+        </SessionGuard>
       </body>
     </html>
   );

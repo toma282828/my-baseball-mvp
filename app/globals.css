@@ -360,6 +360,14 @@ select option { background: var(--ink-card); }
   transition: all .18s;
 }
 .btn:hover { filter: brightness(1.1); box-shadow: 0 0 14px #39ff14, 0 0 30px rgba(57,255,20,0.4); }
+.btn:disabled, .auth-btn:disabled {
+  opacity: 0.65;
+  cursor: wait;
+  filter: none;
+  box-shadow: none;
+}
+.btn:active:not(:disabled) { transform: scale(0.98); }
+.auth-btn:active:not(:disabled) { transform: scale(0.98); }
 .btn-outline {
   background: transparent;
   color: var(--ink-green);

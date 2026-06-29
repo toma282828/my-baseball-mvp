@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
 const NAV = [
   { href: '/',        label: 'ランキング' },
@@ -12,13 +12,11 @@ const NAV = [
 
 export default function AppShell({ children, teamName }) {
   const pathname = usePathname();
-  const router   = useRouter();
   const isAuthPage = pathname.startsWith('/auth');
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
-    router.push('/auth/login');
-    router.refresh();
+    window.location.href = '/auth/login';
   }
 
   if (isAuthPage) {

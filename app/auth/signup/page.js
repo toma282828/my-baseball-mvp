@@ -2,10 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 export default function SignupPage() {
-  const router = useRouter();
   const [teamId, setTeamId]     = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading]   = useState(false);
@@ -15,16 +13,23 @@ export default function SignupPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
-    const res = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ teamId, password }),
-    });
-    const data = await res.json();
-    setLoading(false);
-    if (!res.ok) { setError(data.error ?? '登録に失敗しました'); return; }
-    router.push('/');
-    router.refresh();
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamId, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? '登録に失敗しました');
+        setLoading(false);
+        return;
+      }
+      window.location.href = '/';
+    } catch {
+      setError('通信エラーが発生しました');
+      setLoading(false);
+    }
   }
 
   return (
