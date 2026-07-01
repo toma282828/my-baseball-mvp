@@ -18,6 +18,22 @@ export async function POST(request) {
   const body = await request.json();
   const supabase = getSupabase();
 
+  const doubleZero = body.jersey_double_zero ?? false;
+  const jerseyNum = body.jersey_num;
+
+  const { data: list } = await supabase
+    .from('players')
+    .select('jersey_num, jersey_double_zero')
+    .eq('team_slug', teamSlug);
+
+  const taken = (list ?? []).some((p) => {
+    if (doubleZero) return p.jersey_double_zero;
+    return !p.jersey_double_zero && p.jersey_num === jerseyNum;
+  });
+  if (taken) {
+    return NextResponse.json({ error: 'この背番号はすでに使われています' }, { status: 409 });
+  }
+
   const { error } = await supabase.from('players').insert({
     name: body.name,
     jersey_num: body.jersey_num,
