@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { fmtAvg, fmtEra, outsToIp } from '@/lib/stats';
+import { formatDate } from '@/lib/date';
 
 function StatCard({ label, value }) {
   return (
@@ -67,8 +69,30 @@ function PitchingGrid({ pit }) {
   );
 }
 
-export default function PlayerStatsPanel({ totalBat, totalPit, hasBat, hasPit, yearlyStats }) {
-  const [tab, setTab] = useState('total');
+export default function PlayerStatsPanel({
+  totalBat,
+  totalPit,
+  hasBat,
+  hasPit,
+  yearlyStats,
+  gameHistory,
+}) {
+  const [period, setPeriod] = useState('total');
+
+  const periodLabel = period === 'total' ? '通算' : `${period}年`;
+
+  const current = useMemo(() => {
+    if (period === 'total') {
+      return { bat: totalBat, pit: totalPit, hasBat, hasPit };
+    }
+    const y = yearlyStats.find((s) => String(s.year) === period);
+    return y ?? { bat: totalBat, pit: totalPit, hasBat: false, hasPit: false };
+  }, [period, totalBat, totalPit, hasBat, hasPit, yearlyStats]);
+
+  const filteredGames = useMemo(() => {
+    if (period === 'total') return gameHistory;
+    return gameHistory.filter((s) => s.game.date.startsWith(period));
+  }, [period, gameHistory]);
 
   if (!hasBat && !hasPit) {
     return <p className="hint" style={{ textAlign: 'center', padding: '24px 0' }}>成績データがありません</p>;
@@ -76,55 +100,72 @@ export default function PlayerStatsPanel({ totalBat, totalPit, hasBat, hasPit, y
 
   return (
     <>
-      <div className="tabs" style={{ marginBottom: 12 }}>
-        <button type="button" onClick={() => setTab('total')} className={tab === 'total' ? 'active' : ''}>
-          通算
-        </button>
-        <button type="button" onClick={() => setTab('yearly')} className={tab === 'yearly' ? 'active' : ''}>
-          年度別
-        </button>
+      <div className="card" style={{ marginBottom: 12, padding: '12px 14px' }}>
+        <label className="auth-label" style={{ marginTop: 0 }}>成績表示期間</label>
+        <select
+          className="auth-input"
+          value={period}
+          onChange={(e) => setPeriod(e.target.value)}
+          style={{ marginTop: 4 }}
+        >
+          <option value="total">通算（全期間）</option>
+          {yearlyStats.map(({ year }) => (
+            <option key={year} value={String(year)}>{year}年</option>
+          ))}
+        </select>
       </div>
 
-      {tab === 'total' && (
+      {current.hasBat && (
         <>
-          {hasBat && (
-            <>
-              <h3>打撃成績（通算）</h3>
-              <BattingGrid bat={totalBat} />
-            </>
-          )}
-          {hasPit && (
-            <>
-              <h3>投手成績（通算）</h3>
-              <PitchingGrid pit={totalPit} />
-            </>
-          )}
+          <h3>打撃成績（{periodLabel}）</h3>
+          <BattingGrid bat={current.bat} />
         </>
       )}
 
-      {tab === 'yearly' && (
+      {current.hasPit && (
         <>
-          {yearlyStats.length === 0 ? (
-            <p className="hint" style={{ textAlign: 'center', padding: '24px 0' }}>年度別データがありません</p>
-          ) : (
-            yearlyStats.map(({ year, bat, pit, hasBat: yBat, hasPit: yPit }) => (
-              <div key={year} className="card" style={{ marginBottom: 12, padding: '12px 14px' }}>
-                <h3 style={{ marginBottom: 10, fontSize: '1rem' }}>{year}年</h3>
-                {yBat && (
-                  <>
-                    <p className="hint" style={{ marginBottom: 6, fontWeight: 700 }}>打撃</p>
-                    <BattingGrid bat={bat} />
-                  </>
+          <h3>投手成績（{periodLabel}）</h3>
+          <PitchingGrid pit={current.pit} />
+        </>
+      )}
+
+      {!current.hasBat && !current.hasPit && (
+        <p className="hint" style={{ textAlign: 'center', padding: '16px 0' }}>
+          {periodLabel}の成績データがありません
+        </p>
+      )}
+
+      {filteredGames.length > 0 && (
+        <>
+          <h3>試合ごとの成績（{periodLabel}）</h3>
+          {filteredGames.map((s) => {
+            const hasBatRow = (s.ab ?? 0) > 0 || (s.bb ?? 0) > 0 || (s.bunt ?? 0) > 0 || (s.sf ?? 0) > 0;
+            const hasPitRow = (s.ip_outs ?? 0) > 0 || s.decision;
+            return (
+              <Link key={s.id} href={`/games/${s.game_id}`} className="game-card">
+                <div className="game-card-top">
+                  <span>{formatDate(s.game.date)} vs {s.game.opponent}</span>
+                  <span>{s.game.our_score} — {s.game.their_score}</span>
+                </div>
+                {hasBatRow && (
+                  <div className="game-card-score" style={{ fontSize: '.88rem' }}>
+                    打: {s.ab}打数{(s.s1 ?? 0) + (s.s2 ?? 0) + (s.s3 ?? 0) + (s.hr ?? 0)}安打
+                    {(s.hr ?? 0) > 0 ? ` ${s.hr}HR` : ''} {s.rbi ?? 0}打点
+                    {(s.bb ?? 0) > 0 ? ` ${s.bb}四死球` : ''}
+                    {(s.bunt ?? 0) > 0 ? ` ${s.bunt}犠打` : ''}
+                    {(s.sf ?? 0) > 0 ? ` ${s.sf}犠飛` : ''}
+                    {(s.sb ?? 0) > 0 ? ` ${s.sb}盗塁` : ''}
+                  </div>
                 )}
-                {yPit && (
-                  <>
-                    <p className="hint" style={{ margin: yBat ? '12px 0 6px' : '0 0 6px', fontWeight: 700 }}>投手</p>
-                    <PitchingGrid pit={pit} />
-                  </>
+                {hasPitRow && (
+                  <div className="game-card-ground">
+                    投: {outsToIp(s.ip_outs)}回 {s.er}自責 {s.so_p}K {s.decision ?? ''}
+                    {s.is_start ? '（先発）' : '（リリーフ）'}
+                  </div>
                 )}
-              </div>
-            ))
-          )}
+              </Link>
+            );
+          })}
         </>
       )}
     </>

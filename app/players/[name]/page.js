@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getAppData, getCurrentTeamSlug } from '@/lib/db';
-import { aggregateBatting, aggregatePitching, fmtJersey, buildAllAwards, outsToIp } from '@/lib/stats';
-import { formatDate, getTodayYear } from '@/lib/date';
+import { aggregateBatting, aggregatePitching, fmtJersey, buildAllAwards } from '@/lib/stats';
+import { getTodayYear } from '@/lib/date';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import PlayerStatsPanel from '@/components/PlayerStatsPanel';
 
@@ -87,41 +87,8 @@ export default async function PlayerPage({ params }) {
         hasBat={hasBat}
         hasPit={hasPit}
         yearlyStats={yearlyStats}
+        gameHistory={gameHistory}
       />
-
-      {gameHistory.length > 0 && (
-        <>
-          <h3>試合ごとの成績</h3>
-          {gameHistory.map((s) => {
-            const hasBatRow = (s.ab ?? 0) > 0 || (s.bb ?? 0) > 0 || (s.bunt ?? 0) > 0 || (s.sf ?? 0) > 0;
-            const hasPitRow = (s.ip_outs ?? 0) > 0 || s.decision;
-            return (
-              <Link key={s.id} href={`/games/${s.game_id}`} className="game-card">
-                <div className="game-card-top">
-                  <span>{formatDate(s.game.date)} vs {s.game.opponent}</span>
-                  <span>{s.game.our_score} — {s.game.their_score}</span>
-                </div>
-                {hasBatRow && (
-                  <div className="game-card-score" style={{ fontSize: '.88rem' }}>
-                    打: {s.ab}打数{(s.s1 ?? 0) + (s.s2 ?? 0) + (s.s3 ?? 0) + (s.hr ?? 0)}安打
-                    {(s.hr ?? 0) > 0 ? ` ${s.hr}HR` : ''} {s.rbi ?? 0}打点
-                    {(s.bb ?? 0) > 0 ? ` ${s.bb}四死球` : ''}
-                    {(s.bunt ?? 0) > 0 ? ` ${s.bunt}犠打` : ''}
-                    {(s.sf ?? 0) > 0 ? ` ${s.sf}犠飛` : ''}
-                    {(s.sb ?? 0) > 0 ? ` ${s.sb}盗塁` : ''}
-                  </div>
-                )}
-                {hasPitRow && (
-                  <div className="game-card-ground">
-                    投: {outsToIp(s.ip_outs)}回 {s.er}自責 {s.so_p}K {s.decision ?? ''}
-                    {s.is_start ? '（先発）' : '（リリーフ）'}
-                  </div>
-                )}
-              </Link>
-            );
-          })}
-        </>
-      )}
     </div>
   );
 }
