@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getAppData, getCurrentTeamSlug } from '@/lib/db';
 import { aggregateBatting, aggregatePitching, fmtJersey, buildAllAwards } from '@/lib/stats';
 import { getTodayYear } from '@/lib/date';
+import { normalizePosition } from '@/lib/positions';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import PlayerStatsPanel from '@/components/PlayerStatsPanel';
 
@@ -56,6 +57,8 @@ export default async function PlayerPage({ params }) {
     .map((s) => ({ ...s, game: gameMap[s.game_id] }))
     .sort((a, b) => b.game.date.localeCompare(a.game.date));
 
+  const displayPosition = normalizePosition(player.position);
+
   return (
     <div>
       <Link href="/players" className="back-link">← 選手一覧に戻る</Link>
@@ -70,7 +73,8 @@ export default async function PlayerPage({ params }) {
         />
         <div style={{ fontSize: '1.1rem', fontWeight: 600, marginTop: 12 }}>{player.name}</div>
         <div style={{ fontSize: '.85rem', opacity: .7, marginTop: 4 }}>
-          #{fmtJersey(player.jersey_num, player.jersey_double_zero)} · {player.position}
+          #{fmtJersey(player.jersey_num, player.jersey_double_zero)}
+          {displayPosition ? ` · ${displayPosition}` : ''}
         </div>
         {myAwards.length > 0 && (
           <div className="player-titles">

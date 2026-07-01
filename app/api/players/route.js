@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
 import { requireTeamSlug } from '@/lib/team';
+import { isValidPlayerPosition } from '@/lib/positions';
 
 function getSupabase() {
   return createClient(
@@ -34,11 +35,16 @@ export async function POST(request) {
     return NextResponse.json({ error: 'この背番号はすでに使われています' }, { status: 409 });
   }
 
+  const position = body.position ?? '';
+  if (!isValidPlayerPosition(position)) {
+    return NextResponse.json({ error: 'ポジションが不正です' }, { status: 400 });
+  }
+
   const { error } = await supabase.from('players').insert({
     name: body.name,
     jersey_num: body.jersey_num,
     jersey_double_zero: body.jersey_double_zero ?? false,
-    position: body.position ?? '',
+    position,
     team_slug: teamSlug,
   });
 

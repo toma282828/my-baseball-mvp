@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
 import { requireTeamSlug } from '@/lib/team';
+import { isValidPlayerPosition } from '@/lib/positions';
 
 function getSupabase() {
   return createClient(
@@ -55,7 +56,12 @@ export async function PATCH(request, { params }) {
   }
   if (body.jersey_num !== undefined) update.jersey_num = body.jersey_num;
   if (body.jersey_double_zero !== undefined) update.jersey_double_zero = body.jersey_double_zero;
-  if (body.position !== undefined) update.position = body.position;
+  if (body.position !== undefined) {
+    if (!isValidPlayerPosition(body.position)) {
+      return NextResponse.json({ error: 'ポジションが不正です' }, { status: 400 });
+    }
+    update.position = body.position;
+  }
 
   if (body.jersey_num !== undefined || body.jersey_double_zero !== undefined) {
     const taken = await isJerseyTaken(supabase, teamSlug, nextJerseyNum, nextDoubleZero, id);

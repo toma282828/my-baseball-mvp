@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getAppData, getCurrentTeamSlug } from '@/lib/db';
 import { fmtJersey } from '@/lib/stats';
+import { normalizePosition } from '@/lib/positions';
 import PlayerAvatar from '@/components/PlayerAvatar';
 
 export default async function PlayersPage() {
@@ -40,7 +41,7 @@ export default async function PlayersPage() {
                   <span className="num">#{fmtJersey(p.jersey_num, p.jersey_double_zero)}</span>
                   <span className="name">{p.name}</span>
                 </span>
-                <span className="pos">{p.position}</span>
+                <span className="pos">{normalizePosition(p.position) || '—'}</span>
               </Link>
             </li>
           ))}

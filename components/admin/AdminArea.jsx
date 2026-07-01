@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import { resizeImageForAvatar } from '@/lib/resizeImage';
+import { PLAYER_POSITIONS, normalizePosition } from '@/lib/positions';
 
 function jerseyTaken(players, jerseyNum, doubleZero, excludeId) {
   return players.some((p) => {
@@ -22,6 +23,7 @@ export default function AdminArea({ players, teamName }) {
   const [editName, setEditName] = useState('');
   const [editNum, setEditNum] = useState('');
   const [editDoubleZero, setEditDoubleZero] = useState(false);
+  const [editPosition, setEditPosition] = useState('');
   const [editMsg, setEditMsg] = useState('');
   const [editSaving, setEditSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(players[0]?.id ?? '');
@@ -36,8 +38,9 @@ export default function AdminArea({ players, teamName }) {
     setEditName(editPlayer.name);
     setEditNum(editPlayer.jersey_double_zero ? '' : String(editPlayer.jersey_num));
     setEditDoubleZero(!!editPlayer.jersey_double_zero);
+    setEditPosition(normalizePosition(editPlayer.position));
     setEditMsg('');
-  }, [editTarget, editPlayer?.name, editPlayer?.jersey_num, editPlayer?.jersey_double_zero]);
+  }, [editTarget, editPlayer?.name, editPlayer?.jersey_num, editPlayer?.jersey_double_zero, editPlayer?.position]);
 
   function togglePanel(panel) {
     setOpenPanel((prev) => (prev === panel ? null : panel));
@@ -66,6 +69,7 @@ export default function AdminArea({ players, teamName }) {
           name: editName.trim(),
           jersey_num: jerseyNum,
           jersey_double_zero: editDoubleZero,
+          position: editPosition,
         }),
       });
       const d = await res.json();
@@ -185,6 +189,14 @@ export default function AdminArea({ players, teamName }) {
               placeholder="例: 田中 太郎"
             />
 
+            <label>ポジション</label>
+            <select value={editPosition} onChange={(e) => setEditPosition(e.target.value)}>
+              <option value="">選択してください</option>
+              {PLAYER_POSITIONS.map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+
             <label>背番号</label>
             <div className="row2">
               <input
@@ -278,7 +290,7 @@ export default function AdminArea({ players, teamName }) {
               <li key={p.id} style={{ cursor: 'default' }}>
                 <span className="num">#{p.jersey_double_zero ? '00' : p.jersey_num}</span>
                 <span className="name">{p.name}</span>
-                <span className="pos">{p.position}</span>
+                <span className="pos">{normalizePosition(p.position) || '—'}</span>
               </li>
             ))}
           </ul>

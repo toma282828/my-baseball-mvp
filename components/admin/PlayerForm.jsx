@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-
-const POSITIONS = ['投手', '捕手', '一塁手', '二塁手', '三塁手', '遊撃手', '外野手', '指名打者'];
+import { PLAYER_POSITIONS } from '@/lib/positions';
 
 export default function PlayerForm() {
   const router = useRouter();
@@ -61,7 +60,7 @@ export default function PlayerForm() {
         <label>ポジション</label>
         <select value={position} onChange={(e) => setPosition(e.target.value)}>
           <option value="">選択してください</option>
-          {POSITIONS.map((p) => <option key={p} value={p}>{p}</option>)}
+          {PLAYER_POSITIONS.map((p) => <option key={p} value={p}>{p}</option>)}
         </select>
 
         {error && <p className="hint warn">{error}</p>}
